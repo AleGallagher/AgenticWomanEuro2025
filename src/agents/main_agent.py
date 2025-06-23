@@ -1,8 +1,7 @@
 from langgraph.graph import StateGraph
 import sys
 sys.path.append('f:/Python/AgenticEuro2025/src/')
-from langchain_core.runnables import RunnableLambda
-from langchain_core.messages import HumanMessage, ToolMessage, AIMessage
+from langchain_core.messages import ToolMessage, AIMessage
 from langchain_core.tools import Tool
 from langchain_openai import ChatOpenAI
 from langgraph.graph.message import add_messages
@@ -11,16 +10,18 @@ from tools.agentic_rag_tool import agentic_rag_stream
 from tools.qualification_tool import get_qualification_options
 from typing import Annotated, Sequence, TypedDict
 from langchain_core.messages import BaseMessage, AIMessage
-from rag.vector_stores.faiss_store import FAISSStore
-from rag.embeddings.embedding_factory import EmbeddingFactory
+from services.database_service import DatabaseService
 import os
-from langgraph.graph import END, START
+from langgraph.graph import END
 os.environ['OPENAI_API_KEY'] = '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'
+from langchain.prompts import PromptTemplate
 
 class State(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
     question_language: str
     selected_tool: str
+    user_id: str
+    country: str
 
 class MainAgent:
     def __init__(self, model, vector_store):
@@ -29,6 +30,7 @@ class MainAgent:
         self.model = model
         self.graph = self._build_graph()
         self.vector_store = vector_store
+        self.database_service = DatabaseService()
 
     def _get_tools(self):
         """Bind tools to the LLM."""
@@ -81,12 +83,26 @@ class MainAgent:
         else:
             raise ValueError(f"Unknown tool: {tool_name}")
         result = tool_func
+        self.database_service.save_question_answer(
+            user_id =  state["user_id"],
+            country = state["country"],
+            question =  state["messages"][0].content,
+            response = result,
+            question_language = state["question_language"],
+            tool = tool_name,
+        )
         return {"messages": [ToolMessage(content=result, tool_call_id=tool_call["id"])], "selected_tool": tool_name}
 
     def _build_graph(self):
+        def detect_language_node(state):
+            question = state["messages"][0].content
+            detected_language = self._detect_language(question)
+            return {"question_language": detected_language}
+
         graph = StateGraph(State)
         graph.add_node("agent", self._agent_node)
         graph.add_node("tool_executor", self._tool_executor)
+        graph.add_node("detect_language", detect_language_node)
 
         # Routing logic
         def route(state):
@@ -95,7 +111,8 @@ class MainAgent:
                 return "tool_executor"
             return END
 
-        graph.set_entry_point("agent")
+        graph.set_entry_point("detect_language")  # Set the entry point to the new node
+        graph.add_edge("detect_language", "agent") 
         graph.add_conditional_edges("agent", route, {
             "tool_executor": "tool_executor",
             END: END
@@ -103,3 +120,11 @@ class MainAgent:
         graph.add_edge("tool_executor", END)
         runnable = graph.compile()
         return runnable
+
+    def _detect_language(self, question: str) -> str:
+        lang_detect_llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+        lang_prompt = PromptTemplate.from_template(
+            "What is the language of the following question? Return the language name only.\n\nQuestion: {question}"
+        )
+        response = lang_detect_llm.invoke(lang_prompt.format(question=question))
+        return response.content.strip()
