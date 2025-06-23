@@ -1,6 +1,5 @@
 from tools.sql_tool import get_sql_tool
 from langchain.prompts import PromptTemplate
-from langchain.chains.llm import LLMChain
 
 COMPETITION_RULES_TEXT = """
 UEFA Women's Euro 2025 Qualification Rules:
