@@ -1,0 +1,25 @@
+{
+    "embedding_models": [{
+        "type": "ollama",
+        "params": {
+            "model": "mxbai-embed-large",
+            "base_url": "http://localhost:11434"
+        }
+    }],
+    "models": [
+        {
+            "type": "openai",
+            "params": {
+                "model_name": "gpt-4o",
+                "temperature": 0.0
+            }
+        },
+        {
+            "type": "ollama",
+            "params": {
+                "model": "qwen2.5",
+                "base_url": "http://localhost:11434"
+            }
+        }
+    ]
+}
