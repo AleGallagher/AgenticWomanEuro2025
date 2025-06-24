@@ -63,7 +63,7 @@ class SQLAgent:
     def _create_reasoning_node(self):
         tools, prompt = self._setup_sql_toolkit()
         agent = create_openai_functions_agent(llm=self.llm, tools=tools, prompt=prompt)
-        executor = AgentExecutor(agent=agent, tools=tools, verbose=True, early_stopping_method="generate", max_iterations=10)
+        executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_iterations=20)
 
         def run_agent(state: State) -> dict:
             result = executor.invoke({"input": state["input"], "language": state["question_language"]})
@@ -232,13 +232,16 @@ class SQLAgent:
                 If the queries does not return any results, return "No results found" dont invent any data.
                 Answer in {language} language.
         """
+        print("111111111111111111111")
         db = SQLDatabase.from_uri(
             os.getenv("POSTGRES_HOST"),
             include_tables=["teams", "players", "players_stats", "groups", "stadiums", "competition_stages", "matches", "group_standings"],
             sample_rows_in_table_info=2,
             custom_table_info=custom_table_info_dict
         )
+        print("222222222222222222")
         toolkit = SQLDatabaseToolkit(db=db, llm=self.llm)
+        print("33333333333333")
         prompt = ChatPromptTemplate.from_messages([
             SystemMessagePromptTemplate.from_template(system_message),
             HumanMessagePromptTemplate.from_template("{input}\n\n{agent_scratchpad}")
