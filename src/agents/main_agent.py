@@ -1,6 +1,4 @@
 from langgraph.graph import StateGraph
-import sys
-sys.path.append('f:/Python/AgenticEuro2025/src/')
 from langchain_core.messages import ToolMessage, AIMessage
 from langchain_core.tools import Tool
 from langchain_openai import ChatOpenAI
@@ -11,10 +9,9 @@ from tools.qualification_tool import get_qualification_options
 from typing import Annotated, Sequence, TypedDict
 from langchain_core.messages import BaseMessage, AIMessage
 from services.database_service import DatabaseService
-import os
 from langgraph.graph import END
-os.environ['OPENAI_API_KEY'] = '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'
 from langchain.prompts import PromptTemplate
+from langgraph.checkpoint.memory import MemorySaver
 
 class State(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
@@ -58,26 +55,39 @@ class MainAgent:
         response = self.llm.invoke(messages)
         return {"messages": [response]}
 
+    def _translate_question(self, question: str) -> str:
+        """Translate the question to the specified language."""
+        translation_llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+        translation_prompt = PromptTemplate.from_template(
+            "Translate the following question to English:\n\n{question}"
+        )
+        translated_question = translation_llm.invoke(translation_prompt.format(question=question))
+        return translated_question.content.strip()
+    
     def _tool_executor(self, state):
         tool_call = state["messages"][-1].tool_calls[0]
         tool_name = tool_call["name"]
         tool_args = tool_call["args"]
+        last_question = tool_args.get("__arg1")
+        print("last_question", last_question)
+        last_question = self._translate_question(last_question) if state["question_language"] != "English" else last_question
+        print("translated question", last_question)
 
         if tool_name == "SQLQueryTool":
             tool_func = get_sql_tool.invoke({"model": self.model,
-                 "agent_input": state["messages"][0].content,
+                 "agent_input": last_question,
                 "question_language": state["question_language"]}
             )
         elif tool_name == "agentic_rag":
             tool_func = agentic_rag_stream.invoke({
                 "vector_store": self.vector_store,
-                "question": state["messages"][0].content,
-                "question_language": state["question_language"]
+                "question": last_question,
+                "language": state["question_language"]
             })
         elif tool_name == "qualification_tool":
             tool_func = get_qualification_options.invoke({
                 "model": self.model,
-                "agent_input": state["messages"][0].content,
+                "agent_input": last_question,
                 "question_language": state["question_language"]
             })
         else:
@@ -86,7 +96,7 @@ class MainAgent:
         self.database_service.save_question_answer(
             user_id =  state["user_id"],
             country = state["country"],
-            question =  state["messages"][0].content,
+            question =  last_question,
             response = result,
             question_language = state["question_language"],
             tool = tool_name,
@@ -118,7 +128,8 @@ class MainAgent:
             END: END
         })
         graph.add_edge("tool_executor", END)
-        runnable = graph.compile()
+        memory = MemorySaver()
+        runnable = graph.compile(checkpointer=memory)
         return runnable
 
     def _detect_language(self, question: str) -> str:

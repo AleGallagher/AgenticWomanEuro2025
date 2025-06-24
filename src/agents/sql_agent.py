@@ -10,6 +10,7 @@ from langgraph.graph import StateGraph, END
 from langchain.agents import create_openai_functions_agent
 from langchain.agents import AgentExecutor
 from langchain_openai import ChatOpenAI
+import os
 
 class State(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
@@ -40,7 +41,7 @@ class SQLAgent:
         builder.add_edge("notfound", END)
         return builder.compile()
     
-    def _not_found(state):
+    def _not_found(self, state):
         translate_llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
         rephrase_llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
         translation_prompt = PromptTemplate.from_template(
@@ -230,7 +231,7 @@ class SQLAgent:
                 Answer in {language} language.
         """
         db = SQLDatabase.from_uri(
-            "postgresql+psycopg2://postgres:root@localhost:5432/euro2025",
+            os.getenv("POSTGRES_HOST"),
             include_tables=["teams", "players", "players_stats", "groups", "stadiums", "competition_stages", "matches", "group_standings"],
             sample_rows_in_table_info=2,
             custom_table_info=custom_table_info_dict

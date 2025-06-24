@@ -1,0 +1,31 @@
+version: '3.9'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: euro2025-app
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    env_file:
+      - ./src/.env
+    depends_on:
+      - redis
+    networks:
+      - euro2025-net
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - euro2025-net
+
+networks:
+  euro2025-net:
+    driver: bridge
