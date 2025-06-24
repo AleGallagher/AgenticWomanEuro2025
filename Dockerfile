@@ -9,7 +9,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 COPY . /app
 #COPY ./src/.env /app/.env
-COPY ./src/rag/euro2025 /app/src/rag/euro2025
+#COPY ./src/rag/euro2025 /app/src/rag/euro2025
 COPY ./src/config/config.json /app/config/config.json
 ENV PYTHONPATH=/app/src
 
