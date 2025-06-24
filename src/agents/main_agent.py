@@ -34,7 +34,7 @@ class MainAgent:
         tools = [
             Tool.from_function(
                 name="SQLQueryTool",
-                description="Use for specific data such as coach names, team information, player lists, scores, and matches. Example: 'Who is the coach of England?'",
+                description="Use for specific data such as coach names, team information, player details, player lists, scores, and matches. Example: 'Who is the coach of England?' or ''",
                 func=lambda **kwargs: "placeholder",  # this won't be called; just for LLM awareness
             ),
             Tool.from_function(

@@ -94,6 +94,7 @@ class SQLAgent:
                 - red_cards (INT): Number of red cards received.
                 When asked about a player's performance, always join `players_stats` with `players` and return all available stats for the player.
                 Example: How is aitana performance? you would query select * from players_stats join players on players.player_id = players_stats.player_id WHERE players.player_name ilike '%Aitana%'".
+                Example: What can you say about Aitana?  you would query select * from players_stats join players on players.player_id = players_stats.player_id WHERE players.player_name ilike '%Aitana%'".
                 """,
             "teams": """Table of teams of the competition.
                 Columns:
@@ -197,9 +198,9 @@ class SQLAgent:
         system_message = """
                 You are an expert PostgreSQL assistant. Your primary goal is to generate a single, comprehensive, syntactically correct SQL query to answer the user's question, prioritizing human-readable information.
                 **IT IS CRUCIAL AND MANDATORY** to fetch human-readable names instead of IDs whenever names are available. For example, you **MUST ALWAYS** select team names from the 'teams' table (using `teams.country`) and stadium names from the 'stadiums' table (using `stadiums.stadium_name`). **DO NOT** return raw IDs like `home_team_id` or `stadium_id` in the final SELECT statement if the corresponding name can be joined and selected.
-                When asked about matches, you **MUST** ensure your query joins with the 'teams' table (aliasing as t1 for home_team and t2 for away_team if necessary) to get 'country' for both home and away teams, and also join with the 'stadiums' table to get 'stadium_name'. Use ILIKE for case-insensitive name searches.
+                When asked about matches, you **MUST** ensure your query left joins with the 'teams' table (aliasing as t1 for home_team and t2 for away_team if necessary) to get 'country' for both home and away teams, and also join with the 'stadiums' table to get 'stadium_name'. Use ILIKE for case-insensitive name searches and the value between %.
                 When asked about group standings, you **MUST** join with the 'teams' table to get the `teams.country` for display. Do not return `team_id` in the final SELECT if names are available.
-                When asked about a player's performance (for example, "How is Aitana performance?"), you **MUST** join `players_stats` with `players` and return all available stats for the player (such as goals, assists, matches_played, yellow_cards, red_cards), using ILIKE for case-insensitive player name search.
+                When asked about a player's performance (for example, "How is Aitana performance?" or "what can you say about Aitana?"), you **MUST** join `players_stats` with `players` and return all available stats for the player (such as goals, assists, matches_played, yellow_cards, red_cards), using ILIKE for case-insensitive player name search and the value between %.
                 For example, if the user ask Retrieve the current standings for Group B:
                 SELECT * FROM group_standings
                 JOIN groups on groups.group_id = group_standings.group_id
@@ -208,11 +209,11 @@ class SQLAgent:
                 ORDER BY group_standings.group_position DESC;
 
                 For example, if the user asks "What are the matches for Group B?", the query **MUST** be structured like this to include names:
-                SELECT m.match_id, m.match_datetime, ht.country AS home_team_name, at.country AS away_team_name, s.stadium_name
+                SELECT m.match_datetime, ht.country AS home_team_name, at.country AS away_team_name, s.stadium_name
                 FROM matches m
                 JOIN groups g ON g.group_id = m.group_id
-                JOIN teams ht ON ht.team_id = m.home_team_id
-                JOIN teams at ON at.team_id = m.away_team_id
+                LEFT JOIN teams ht ON ht.team_id = m.home_team_id
+                LEFT JOIN teams at ON at.team_id = m.away_team_id
                 JOIN stadiums s ON s.stadium_id = m.stadium_id
                 WHERE g.group_name = 'B';
 
@@ -225,7 +226,7 @@ class SQLAgent:
                                     WHERE competition_stages.stage_name = 'Semi-final'".
 
                 A query that only returns IDs like `SELECT m.match_id, m.home_team_id, m.away_team_id FROM matches m ... WHERE g.group_name = 'B'` is **INCORRECT AND STRICTLY FORBIDDEN** if names can be retrieved.
-                Never include IDs in the response.
+                **Never include IDs in the response.
                 **If a query returns no results, try rewriting the query using LEFT JOINs instead of regular JOINs (especially for teams and stadiums tables) to include matches even if some related data is missing.**
                 If the queries does not return any results, return "No results found" dont invent any data.
                 Answer in {language} language.
