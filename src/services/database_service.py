@@ -5,7 +5,7 @@ import os
 
 class DatabaseService:
     def __init__(self):
-        self.database_url = os.getenv("DATABASE_URL", "postgresql+psycopg2://postgres:root@localhost:5432/euro2025")
+        self.database_url = os.getenv("DATABASE_URL", os.getenv("POSTGRES_HOST"))
         self.engine = create_engine(self.database_url)
         self.metadata = MetaData()
 
