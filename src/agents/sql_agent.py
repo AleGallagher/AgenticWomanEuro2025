@@ -63,7 +63,7 @@ class SQLAgent:
     def _create_reasoning_node(self):
         tools, prompt = self._setup_sql_toolkit()
         agent = create_openai_functions_agent(llm=self.llm, tools=tools, prompt=prompt)
-        executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+        executor = AgentExecutor(agent=agent, tools=tools, verbose=True, early_stopping_method="generate", max_iterations=10)
 
         def run_agent(state: State) -> dict:
             result = executor.invoke({"input": state["input"], "language": state["question_language"]})
@@ -198,6 +198,7 @@ class SQLAgent:
         system_message = """
                 You are an expert PostgreSQL assistant. Your primary goal is to generate a single, comprehensive, syntactically correct SQL query to answer the user's question, prioritizing human-readable information.
                 **IT IS CRUCIAL AND MANDATORY** to fetch human-readable names instead of IDs whenever names are available. For example, you **MUST ALWAYS** select team names from the 'teams' table (using `teams.country`) and stadium names from the 'stadiums' table (using `stadiums.stadium_name`). **DO NOT** return raw IDs like `home_team_id` or `stadium_id` in the final SELECT statement if the corresponding name can be joined and selected.
+                MANDATORY: For every SQL question, ALWAYS invoke `sql_db_list_tables` and `sql_db_schema` to retrieve the exact table structure. Never assume table schemas or column names.
                 When asked about matches, you **MUST** ensure your query left joins with the 'teams' table (aliasing as t1 for home_team and t2 for away_team if necessary) to get 'country' for both home and away teams, and also join with the 'stadiums' table to get 'stadium_name'. Use ILIKE for case-insensitive name searches and the value between %.
                 When asked about group standings, you **MUST** join with the 'teams' table to get the `teams.country` for display. Do not return `team_id` in the final SELECT if names are available.
                 When asked about a player's performance (for example, "How is Aitana performance?" or "what can you say about Aitana?"), you **MUST** join `players_stats` with `players` and return all available stats for the player (such as goals, assists, matches_played, yellow_cards, red_cards), using ILIKE for case-insensitive player name search and the value between %.
