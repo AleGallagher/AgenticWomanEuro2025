@@ -1,6 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from dto.message_dto import MessageDto
+from dto.feedback_dto import FeedbackDto
+from services.telegram_service import TelegramService
 from config.errors.exceptions import InvalidRequestException
 from config.dependencies import get_model, get_store
 from config.errors.handlers import register_exception_handlers
@@ -14,6 +16,7 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 app = FastAPI()
+telegram_service = TelegramService()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[os.getenv("FRONT_URL")],
@@ -61,3 +64,18 @@ async def sendMessage(
     except Exception as e:
         print(f"Error while invoking agent executor: {e}")
         return {"output": "Sorry, I cannot answer this question now."}
+    
+@app.post("/feedback")
+async def sendFeedback(feedback: FeedbackDto):
+    """
+    Handles feedback submission and sends it via email.
+
+    Args:
+        feedback (FeedbackDto): The feedback data containing the feedback text.
+
+    Returns:
+        dict: A success message or an error message.
+    """
+    if not feedback.feedback.strip():
+        raise HTTPException(status_code=400, detail="The 'feedback' field cannot be empty.")
+    telegram_service.send_feedback(feedback.feedback)
