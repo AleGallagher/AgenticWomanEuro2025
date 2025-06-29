@@ -68,9 +68,9 @@ class MainAgent:
         tool_call = state["messages"][-1].tool_calls[0]
         tool_name = tool_call["name"]
         tool_args = tool_call["args"]
-        last_question = tool_args.get("__arg1")
-        print("last_question", last_question)
-        last_question = self._translate_question(last_question) if state["question_language"] != "English" else last_question
+        original_question = tool_args.get("__arg1")
+        print("original_question", original_question)
+        last_question = self._translate_question(original_question) if state["question_language"] != "English" else original_question
         print("translated question", last_question)
 
         if tool_name == "SQLQueryTool":
@@ -97,6 +97,7 @@ class MainAgent:
             user_id =  state["user_id"],
             country = state["country"],
             question =  last_question,
+            original_question = original_question,
             response = result,
             question_language = state["question_language"],
             tool = tool_name,
