@@ -16,6 +16,7 @@ class DatabaseService:
             Column("country", String, nullable=True),
             Column("user_id", String, nullable=False),
             Column("question", Text, nullable=False),
+            Column("original_question", Text, nullable=False),
             Column("response", Text, nullable=False),
             Column("question_language", String, nullable=False),
             Column("tool", String, nullable=False)
@@ -24,7 +25,7 @@ class DatabaseService:
         self.metadata.create_all(self.engine)
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
 
-    def save_question_answer(self, user_id: str, question: str, country, response: str, question_language: str, tool: str):
+    def save_question_answer(self, user_id: str, question: str, original_question: str, country, response: str, question_language: str, tool: str):
         """
         Store the question and response in the database.
 
@@ -40,6 +41,7 @@ class DatabaseService:
                     country=country,
                     user_id=user_id,
                     question=question,
+                    original_question=original_question,
                     response=response,
                     question_language=question_language,
                     tool=tool,
