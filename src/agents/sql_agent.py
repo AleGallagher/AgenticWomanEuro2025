@@ -24,7 +24,7 @@ class State(TypedDict):
 
 class SQLAgent:
     def __init__(self, llm):
-        self.llm = llm
+        self.llm = ChatOpenAI(model="gpt-4o", temperature=0)
         self.graph = self._get_graph_executor()
     
     def _get_graph_executor(self):
@@ -239,6 +239,7 @@ class SQLAgent:
                         **Never include IDs in the response.
                         **If a query returns no results, try rewriting the query using LEFT JOINs instead of regular JOINs (especially for teams and stadiums tables) to include matches even if some related data is missing.**
                         If the queries does not return any results, return "No results found" dont invent any data.
+                        IMPORTANT: Do not just describe the SQL query. Always call the appropriate tool to execute the SQL and return the results unless explicitly told to explain the query only.
                         Answer in {language} language.
                 """
             db = SQLDatabase.from_uri(
