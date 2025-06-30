@@ -201,7 +201,69 @@ class SQLAgent:
                                             JOIN teams ON teams.team_id = group_standings.team_id
                                             WHERE groups.group_name = 'B'
                                             ORDER BY group_standings.group_position DESC".
-                        """
+                        """,
+                        "team_match_stats": """Table of match stats of the competition
+                        Columns:
+                        - team_id (INT),
+                        - possession_percent (INT),
+                        - shots (INT),
+                        - shots_on_target (INT),
+                        - passes (INT),
+                        - accurate_passes (INT),
+                        - fouls (INT),
+                        - corners (INT),
+                        - offsides (INT),
+                        Example: what are the stats of the match between Spain and Portugal, you would query "
+                            SELECT 
+                                m.match_id,
+                                m.date,
+                                m.venue,
+                                t.team_name,
+                                ts.possession_percent,
+                                ts.shots,
+                                ts.shots_on_target,
+                                ts.passes,
+                                ts.accurate_passes,
+                                ts.fouls,
+                                ts.corners,
+                                ts.offsides,
+                                ts.saves
+                            FROM matches m
+                            JOIN team_match_stats ts ON m.match_id = ts.match_id
+                            JOIN teams t ON ts.team_id = t.team_id
+                            WHERE 
+                                (m.home_team_id = (SELECT team_id FROM teams WHERE team_name = 'Spain') AND
+                                m.away_team_id = (SELECT team_id FROM teams WHERE team_name = 'Portugal'))
+                            OR
+                                (m.home_team_id = (SELECT team_id FROM teams WHERE team_name = 'Portugal') AND
+                                m.away_team_id = (SELECT team_id FROM teams WHERE team_name = 'Spain'));
+                            "
+                        """,
+                        "historical_matches": """Table of historical match scores
+                        Columns:
+                        - match_id (INT): The unique identifier for the match, primary key.
+                        - home_team_id (INT): The identifier for the first team, references teams.team_id.
+                        - away_team_id (INT): The identifier for the second team, references teams.team_id.
+                        - home_score (INT): The score of the first team.
+                        - away_score (INT): The score of the second team.
+                        - match_datetime (DATE or TIMESTAMP): The date and time of the match.
+                        Example: how were the previous matches between Spain and Portugal before of the euro or what are the previous matches between Spain and Portugal before of the euro, you would query "
+                            SELECT 
+                                hm.match_id,
+                                th.team_name AS home_team,
+                                hm.home_score,
+                                ta.team_name AS away_team,
+                                hm.away_score,
+                                hm.match_datetime
+                            FROM historical_matches hm
+                            JOIN teams th ON hm.home_team_id = th.team_id
+                            JOIN teams ta ON hm.away_team_id = ta.team_id
+                            WHERE 
+                                (th.team_name = 'Spain' AND ta.team_name = 'Portugal')
+                                OR
+                                (th.team_name = 'Portugal' AND ta.team_name = 'Spain');
+                            " and you would do a summary with the total of victories, losses and draws for each team.
+                        """,
                 }
 
             system_message = """
@@ -234,7 +296,47 @@ class SQLAgent:
                                             LEFT JOIN teams t2 on t2.team_id = matches.away_team_id
                                             JOIN stadiums on stadiums.stadium_id = matches.stadium_id
                                             WHERE competition_stages.stage_name = 'Semi-final'".
+                        For example, if the user asks "What are the stats of the match between Spain and Portugal?", you would query:
+                                SELECT 
+                                m.match_id,
+                                m.date,
+                                m.venue,
+                                t.team_name,
+                                ts.possession_percent,
+                                ts.shots,
+                                ts.shots_on_target,
+                                ts.passes,
+                                ts.accurate_passes,
+                                ts.fouls,
+                                ts.corners,
+                                ts.offsides,
+                                ts.saves
+                            FROM matches m
+                            JOIN team_match_stats ts ON m.match_id = ts.match_id
+                            JOIN teams t ON ts.team_id = t.team_id
+                            WHERE 
+                                (m.home_team_id = (SELECT team_id FROM teams WHERE team_name = 'Spain') AND
+                                m.away_team_id = (SELECT team_id FROM teams WHERE team_name = 'Portugal'))
+                            OR
+                                (m.home_team_id = (SELECT team_id FROM teams WHERE team_name = 'Portugal') AND
+                                m.away_team_id = (SELECT team_id FROM teams WHERE team_name = 'Spain'));
 
+                        For example, if the user asks "how were the previous matches between Spain and Portugal before of the euro?" or "what are the previous matches between Spain and Portugal before of the euro?, you would query:
+                                SELECT 
+                                hm.match_id,
+                                th.team_name AS home_team,
+                                hm.home_score,
+                                ta.team_name AS away_team,
+                                hm.away_score,
+                                hm.match_datetime
+                            FROM historical_matches hm
+                            JOIN teams th ON hm.home_team_id = th.team_id
+                            JOIN teams ta ON hm.away_team_id = ta.team_id
+                            WHERE 
+                                (th.team_name = 'Spain' AND ta.team_name = 'Portugal')
+                                OR
+                                (th.team_name = 'Portugal' AND ta.team_name = 'Spain');
+                        For queries like "previous matches between [Team A] and [Team B]" or "matches before the Euro," always use the `historical_matches` table joined with `teams` for team names and do a summary with the total of victories, losses, and draws for each team.
                         A query that only returns IDs like `SELECT m.match_id, m.home_team_id, m.away_team_id FROM matches m ... WHERE g.group_name = 'B'` is **INCORRECT AND STRICTLY FORBIDDEN** if names can be retrieved.
                         **Never include IDs in the response.
                         **If a query returns no results, try rewriting the query using LEFT JOINs instead of regular JOINs (especially for teams and stadiums tables) to include matches even if some related data is missing.**
@@ -244,7 +346,7 @@ class SQLAgent:
                 """
             db = SQLDatabase.from_uri(
                     os.getenv("POSTGRES_HOST"),
-                    include_tables=["teams", "players", "players_stats", "groups", "stadiums", "competition_stages", "matches", "group_standings"],
+                    include_tables=["teams", "players", "players_stats", "groups", "stadiums", "competition_stages", "matches", "group_standings", "team_match_stats", "historical_matches"],
                     sample_rows_in_table_info=2,
                     custom_table_info=custom_table_info_dict
             )

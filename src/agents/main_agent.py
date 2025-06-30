@@ -39,7 +39,7 @@ class MainAgent:
             ),
             Tool.from_function(
                 name="agentic_rag",
-                description="Use this for general knowledge questions or open-ended information about the Women's Eurocup 2025. Example: 'What can you say about Spain?' or 'Is there VAR?' or 'When will start the cup?'",
+                description="Use this for general, historical knowledge questions or open-ended information about the Women's Eurocup 2025. Example: 'What can you say about Spain?' or 'Is there VAR?' or 'When will start the cup? or Top Goal Scorers in the hostory'",
                 func=lambda **kwargs: "placeholder"
             ),
             Tool.from_function(
