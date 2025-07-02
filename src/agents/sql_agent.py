@@ -72,6 +72,8 @@ class SQLAgent:
 
         def run_agent(state: State) -> dict:
             result = executor.invoke({"input": state["input"], "language": state["question_language"]})
+            if "agent stopped due to iteration limit or time limit." in result["output"].lower():
+                return {"messages": [AIMessage(content="Seems that I cannot answer that question, please try again with another question.")]}
             return {"messages": [AIMessage(content=result["output"])]}
         return run_agent
     
@@ -88,6 +90,8 @@ class SQLAgent:
                         - team_id (INT): The identifier for the team the player belongs to, references teams.team_id.
                         - age (INTEGER): The age of the player.
                         - player_position (TEXT or VARCHAR): The position of the player on the field.
+                        - t_shirt_number (INT): The number in the team.
+                        - club (TEXT or VARCHAR): The club where the player plays
                         Example: To find a player named 'Aitana', you would query "SELECT * FROM players WHERE player_name ILIKE '%Aitana%'".
                         """,
                     "players_stats": """Table of stats of players.
@@ -340,7 +344,7 @@ class SQLAgent:
                         A query that only returns IDs like `SELECT m.match_id, m.home_team_id, m.away_team_id FROM matches m ... WHERE g.group_name = 'B'` is **INCORRECT AND STRICTLY FORBIDDEN** if names can be retrieved.
                         **Never include IDs in the response.
                         **If a query returns no results, try rewriting the query using LEFT JOINs instead of regular JOINs (especially for teams and stadiums tables) to include matches even if some related data is missing.**
-                        If the queries does not return any results, return "No results found" dont invent any data.
+                        If the queries does not return any results, return "No results found", do not hallucinate.
                         IMPORTANT: Do not just describe the SQL query. Always call the appropriate tool to execute the SQL and return the results unless explicitly told to explain the query only.
                         Answer in {language} language.
                 """
