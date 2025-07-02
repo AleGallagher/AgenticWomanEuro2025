@@ -68,7 +68,7 @@ class SQLAgent:
     def _create_reasoning_node(self):
         tools, prompt = self._setup_sql_toolkit()
         agent = create_openai_functions_agent(llm=self.llm, tools=tools, prompt=prompt)
-        executor = AgentExecutor(agent=agent, tools=tools, max_iterations=20)
+        executor = AgentExecutor(agent=agent, tools=tools, max_iterations=15)
 
         def run_agent(state: State) -> dict:
             result = executor.invoke({"input": state["input"], "language": state["question_language"]})
@@ -91,7 +91,8 @@ class SQLAgent:
                         - age (INTEGER): The age of the player.
                         - player_position (TEXT or VARCHAR): The position of the player on the field.
                         - t_shirt_number (INT): The number in the team.
-                        - club (TEXT or VARCHAR): The club where the player plays
+                        - club (TEXT or VARCHAR): The club where the player plays.
+                        - is_captain (BOOLEAN): Whether the player is the captain of the team. Show this just if the player is the captain.
                         Example: To find a player named 'Aitana', you would query "SELECT * FROM players WHERE player_name ILIKE '%Aitana%'".
                         """,
                     "players_stats": """Table of stats of players.
@@ -99,8 +100,8 @@ class SQLAgent:
                         - id (INTEGER or BIGINT): The primary key for the stats entry.
                         - player_id (INT): The identifier of the player these stats belong to, references players.player_id.
                         - goals (INT): Number of goals scored by the player.
-                        - assists (INT): Number of penalties made by the player.
-                        - penalties (INT): Number of assists made by the player.
+                        - assists (INT): Number of assists made by the player.
+                        - penalties (INT): Number of penalties made by the player.
                         - matches_played (INT): Number of matches played.
                         - minutes_played (INT): Number of minutes played.
                         - yellow_cards (INT): Number of yellow cards received.
@@ -170,14 +171,13 @@ class SQLAgent:
                                         WHERE matches.match_datetime >= CURRENT_DATE AND matches.match_datetime < CURRENT_DATE + INTERVAL '1 day'".
                         Example: List remaining matches for all teams in Group C, you would query  "SELECT matches.match_id, matches.match_datetime AS date, teams_a.country AS team_a, teams_b.country AS team_b                                
                                         FROM matches                                                                                                                                 
-                                        JOIN teams AS teams_a ON matches.home_team_id = teams_a.team_id                                                                              
-                                        JOIN teams AS teams_b ON matches.away_team_id = teams_b.team_id
+                                        JOIN teams t1 ON matches.home_team_id = t1.team_id                                                                              
+                                        JOIN teams t2 ON matches.away_team_id = t2.team_id
                                         JOIN groups on groups.group_id = matches.group_id                                                                        
                                         WHERE groups.group_name = 'C' AND matches.match_datetime > CURRENT_DATE 
                                         ORDER BY matches.match_datetime ASC;".
                         """,
                         "group_standings": """Table of group standings of the competition.
-                        **CRITICAL INSTRUCTION:**  you **MUST ALWAYS** JOIN with the 'teams' table (on team_id) to select the `teams.country` for display. Do not return team_ids in the final SELECT if names are available.
                         Columns:
                         - position_id (INT): The unique identifier for the match, primary key.
                         - group_id (INT): The identifier for the group of the match, references groups.group_id.
@@ -199,7 +199,7 @@ class SQLAgent:
                         Example: What is the position of Spain "SELECT group_position FROM group_standings
                                             JOIN groups on groups.group_id = group_standings.group_id
                                             JOIN teams ON teams.team_id = group_standings.team_id
-                                            WHERE teams.country = 'Spain'".
+                                            WHERE teams.country ilike '%spain%'".
                         Example: Retrieve the current standings for Group B, you would query "SELECT * FROM group_standings
                                             JOIN groups on groups.group_id = group_standings.group_id
                                             JOIN teams ON teams.team_id = group_standings.team_id
@@ -209,11 +209,11 @@ class SQLAgent:
                         "team_match_stats": """Table of match stats of the competition
                         Columns:
                         - team_id (INT),
-                        - possession_percent (INT),
+                        - possession_percent (INT): print it with a percentage sign, e.g. 55%.
                         - shots (INT),
                         - shots_on_target (INT),
                         - passes (INT),
-                        - accurate_passes (INT),
+                        - accurate_passes (INT): print it with a percentage sign, e.g. 55%.
                         - fouls (INT),
                         - corners (INT),
                         - offsides (INT),
@@ -222,7 +222,7 @@ class SQLAgent:
                                 m.match_id,
                                 m.date,
                                 m.venue,
-                                t.team_name,
+                                t.country,
                                 ts.possession_percent,
                                 ts.shots,
                                 ts.shots_on_target,
@@ -236,11 +236,11 @@ class SQLAgent:
                             JOIN team_match_stats ts ON m.match_id = ts.match_id
                             JOIN teams t ON ts.team_id = t.team_id
                             WHERE 
-                                (m.home_team_id = (SELECT team_id FROM teams WHERE team_name = 'Spain') AND
-                                m.away_team_id = (SELECT team_id FROM teams WHERE team_name = 'Portugal'))
+                                (m.home_team_id = (SELECT team_id FROM teams WHERE country ilike '%spain%') AND
+                                m.away_team_id = (SELECT team_id FROM teams WHERE country ilike '%portugal%'))
                             OR
-                                (m.home_team_id = (SELECT team_id FROM teams WHERE team_name = 'Portugal') AND
-                                m.away_team_id = (SELECT team_id FROM teams WHERE team_name = 'Spain'));
+                                (m.home_team_id = (SELECT team_id FROM teams WHERE country ilike '%portugal%') AND
+                                m.away_team_id = (SELECT team_id FROM teams WHERE country ilike '%spain%'));
                             "
                         """,
                         "historical_matches": """Table of historical match scores
@@ -254,18 +254,18 @@ class SQLAgent:
                         Example: how were the previous matches between Spain and Portugal before of the euro or what are the previous matches between Spain and Portugal before of the euro, you would query "
                             SELECT 
                                 hm.match_id,
-                                th.team_name AS home_team,
+                                th.country AS home_team,
                                 hm.home_score,
-                                ta.team_name AS away_team,
+                                ta.country AS away_team,
                                 hm.away_score,
                                 hm.match_datetime
                             FROM historical_matches hm
                             JOIN teams th ON hm.home_team_id = th.team_id
                             JOIN teams ta ON hm.away_team_id = ta.team_id
                             WHERE 
-                                (th.team_name = 'Spain' AND ta.team_name = 'Portugal')
+                                (th.country ilike '%spain%' AND ta.country ilike '%portugal%')
                                 OR
-                                (th.team_name = 'Portugal' AND ta.team_name = 'Spain');
+                                (th.country ilike '%portugal%' AND ta.country ilike '%spain%');
                             " and you would do a summary with the total of victories, losses and draws for each team.
                         """,
                 }
