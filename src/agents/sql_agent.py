@@ -90,6 +90,8 @@ class SQLAgent:
                         - team_id (INT): The identifier for the team the player belongs to, references teams.team_id.
                         - age (INTEGER): The age of the player.
                         - player_position (TEXT or VARCHAR): The position of the player on the field.
+                        - t_shirt_number (INT): The number in the team.
+                        - club (TEXT or VARCHAR): The club where the player plays
                         Example: To find a player named 'Aitana', you would query "SELECT * FROM players WHERE player_name ILIKE '%Aitana%'".
                         """,
                     "players_stats": """Table of stats of players.
