@@ -106,7 +106,7 @@ class MainAgent:
 
     def _build_graph(self):
         def detect_language_node(state):
-            question = state["messages"][0].content
+            question = state["messages"][-1].content
             detected_language = self._detect_language(question)
             return {"question_language": detected_language}
 
