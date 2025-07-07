@@ -12,6 +12,7 @@ from services.database_service import DatabaseService
 from langgraph.graph import END
 from langchain.prompts import PromptTemplate
 from langgraph.checkpoint.memory import MemorySaver
+from langchain_core.runnables import RunnableLambda
 
 class State(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
@@ -114,6 +115,7 @@ class MainAgent:
         graph.add_node("agent", self._agent_node)
         graph.add_node("tool_executor", self._tool_executor)
         graph.add_node("detect_language", detect_language_node)
+        graph.add_node("summarize", self._summarize_stats_node)
 
         # Routing logic
         def route(state):
@@ -128,10 +130,27 @@ class MainAgent:
             "tool_executor": "tool_executor",
             END: END
         })
+        def needs_summary(state):
+            last_user_input = state["messages"][-3].content.lower()
+            if "write" in last_user_input or "text" in last_user_input or "summary" in last_user_input:
+                return "summarize"
+            return END
+        graph.add_conditional_edges("tool_executor", needs_summary)
+        graph.add_edge("summarize", END)
         graph.add_edge("tool_executor", END)
         memory = MemorySaver()
         runnable = graph.compile(checkpointer=memory)
         return runnable
+
+    def _summarize_stats_node(self, state):
+        def summarize(state):
+            messages = state["messages"]
+            sql_output = messages[-1].content
+            prompt = f"Write a summary of the following football match statistics in a natural and concise way:\n\n{sql_output}"
+            summary = self.model.invoke(prompt)
+            return {"messages": summary}
+
+        return RunnableLambda(summarize)
 
     def _detect_language(self, question: str) -> str:
         lang_detect_llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)

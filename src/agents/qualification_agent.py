@@ -12,11 +12,6 @@ Group Stage:
     1. Higher number of points obtained in the matches played among the teams in question (head-to-head points).
     2. Superior goal difference resulting from the matches played among the teams in question (head-to-head goal difference).
     3. Higher number of goals scored in the matches played among the teams in question (head-to-head goals scored).
-    4. If, after having applied criteria 1 to 3, teams still have an equal ranking, criteria 1 to 3 are reapplied exclusively to the matches between the remaining teams to determine their final rankings. If this procedure does not lead to a decision, criteria 5 to 9 apply to the group matches as a whole.
-    5. Superior goal difference in all group matches.
-    6. Higher number of goals scored in all group matches.
-    7. Lower disciplinary points total based only on yellow and red cards received in all group matches (red card = 3 points, yellow card = 1 point, expulsion for two yellow cards in one match = 3 points).
-    8. Higher position in the UEFA women's national team coefficient rankings used for the final tournament draw.
 """
 
 def handle_qualification_question(llm, user_input, question_language):
