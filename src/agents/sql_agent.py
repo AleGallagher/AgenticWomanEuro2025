@@ -332,18 +332,18 @@ class SQLAgent:
                         For example, if the user asks "how were the previous matches between Spain and Portugal before of the euro?" or "what are the previous matches between Spain and Portugal before of the euro?, you would query:
                                 SELECT 
                                 hm.match_id,
-                                th.team_name AS home_team,
+                                th.country AS home_team,
                                 hm.home_score,
-                                ta.team_name AS away_team,
+                                ta.country AS away_team,
                                 hm.away_score,
                                 hm.match_datetime
                             FROM historical_matches hm
                             JOIN teams th ON hm.home_team_id = th.team_id
                             JOIN teams ta ON hm.away_team_id = ta.team_id
                             WHERE 
-                                (th.team_name = 'Spain' AND ta.team_name = 'Portugal')
+                                (th.country = 'Spain' AND ta.country = 'Portugal')
                                 OR
-                                (th.team_name = 'Portugal' AND ta.team_name = 'Spain');
+                                (th.country = 'Portugal' AND ta.country = 'Spain');
                         For queries like "previous matches between [Team A] and [Team B]" or "matches before the Euro," always use the `historical_matches` table joined with `teams` for team names and do a summary with the total of victories, losses, and draws for each team.
                         A query that only returns IDs like `SELECT m.match_id, m.home_team_id, m.away_team_id FROM matches m ... WHERE g.group_name = 'B'` is **INCORRECT AND STRICTLY FORBIDDEN** if names can be retrieved.
                         **Never include IDs in the response.
