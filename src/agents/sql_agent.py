@@ -168,13 +168,13 @@ class SQLAgent:
                                         JOIN teams t1 on t1.team_id = matches.home_team_id
                                         JOIN teams t2 on t2.team_id = matches.away_team_id
                                         JOIN stadiums on stadiums.stadium_id = matches.stadium_id
-                                        WHERE matches.match_datetime >= CURRENT_DATE AND matches.match_datetime < CURRENT_DATE + INTERVAL '1 day'".
-                        Example: List remaining matches for all teams in Group C, you would query  "SELECT matches.match_id, matches.match_datetime AS date, teams_a.country AS team_a, teams_b.country AS team_b                                
-                                        FROM matches                                                                                                                                 
-                                        JOIN teams t1 ON matches.home_team_id = t1.team_id                                                                              
+                                        WHERE DATE(matches.match_datetime) >= CURRENT_DATE AND DATE(matches.match_datetime) < CURRENT_DATE + INTERVAL '1 day'".
+                        Example: List remaining matches for all teams in Group C, you would query  "SELECT matches.match_id, matches.match_datetime AS date, teams_a.country AS team_a, teams_b.country AS team_b
+                                        FROM matches
+                                        JOIN teams t1 ON matches.home_team_id = t1.team_id
                                         JOIN teams t2 ON matches.away_team_id = t2.team_id
                                         JOIN groups on groups.group_id = matches.group_id                                                                        
-                                        WHERE groups.group_name = 'C' AND matches.match_datetime > CURRENT_DATE 
+                                        WHERE groups.group_name = 'C' AND DATE(matches.match_datetime) > CURRENT_DATE 
                                         ORDER BY matches.match_datetime ASC;".
                         """,
                         "group_standings": """Table of group standings of the competition.
