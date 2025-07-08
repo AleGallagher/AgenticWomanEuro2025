@@ -220,8 +220,7 @@ class SQLAgent:
                         Example: what are the stats of the match between Spain and Portugal, you would query "
                             SELECT 
                                 m.match_id,
-                                m.date,
-                                m.venue,
+                                m.match_datetime,
                                 t.country,
                                 ts.possession_percent,
                                 ts.shots,
@@ -231,7 +230,10 @@ class SQLAgent:
                                 ts.fouls,
                                 ts.corners,
                                 ts.offsides,
-                                ts.saves
+                                CASE 
+                                    WHEN m.home_team_id = ts.team_id THEN m.home_score
+                                    WHEN m.away_team_id = ts.team_id THEN m.away_score
+                                END AS team_score
                             FROM matches m
                             JOIN team_match_stats ts ON m.match_id = ts.match_id
                             JOIN teams t ON ts.team_id = t.team_id
@@ -300,12 +302,11 @@ class SQLAgent:
                                             LEFT JOIN teams t2 on t2.team_id = matches.away_team_id
                                             JOIN stadiums on stadiums.stadium_id = matches.stadium_id
                                             WHERE competition_stages.stage_name = 'Semi-final'".
-                        For example, if the user asks "What are the stats of the match between Spain and Portugal?", you would query:
+                        If the user asks "What are the stats of the match between Spain and Portugal?", you would query:
                                 SELECT 
                                 m.match_id,
-                                m.date,
-                                m.venue,
-                                t.team_name,
+                                m.match_datetime,
+                                t.country,
                                 ts.possession_percent,
                                 ts.shots,
                                 ts.shots_on_target,
@@ -313,17 +314,20 @@ class SQLAgent:
                                 ts.accurate_passes,
                                 ts.fouls,
                                 ts.corners,
-                                ts.offsides,
-                                ts.saves
+                                ts.offsides
+                                CASE 
+                                    WHEN m.home_team_id = ts.team_id THEN m.home_score
+                                    WHEN m.away_team_id = ts.team_id THEN m.away_score
+                                END AS team_score
                             FROM matches m
                             JOIN team_match_stats ts ON m.match_id = ts.match_id
                             JOIN teams t ON ts.team_id = t.team_id
                             WHERE 
-                                (m.home_team_id = (SELECT team_id FROM teams WHERE team_name = 'Spain') AND
-                                m.away_team_id = (SELECT team_id FROM teams WHERE team_name = 'Portugal'))
+                                (m.home_team_id = (SELECT team_id FROM teams WHERE country = 'Spain') AND
+                                m.away_team_id = (SELECT team_id FROM teams WHERE country = 'Portugal'))
                             OR
-                                (m.home_team_id = (SELECT team_id FROM teams WHERE team_name = 'Portugal') AND
-                                m.away_team_id = (SELECT team_id FROM teams WHERE team_name = 'Spain'));
+                                (m.home_team_id = (SELECT team_id FROM teams WHERE country = 'Portugal') AND
+                                m.away_team_id = (SELECT team_id FROM teams WHERE country = 'Spain'));
 
                         For example, if the user asks "how were the previous matches between Spain and Portugal before of the euro?" or "what are the previous matches between Spain and Portugal before of the euro?, you would query:
                                 SELECT 
