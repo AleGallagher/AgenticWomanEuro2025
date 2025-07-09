@@ -49,9 +49,18 @@ def handle_qualification_question(llm, user_input, question_language):
         You also retrieved the following qualification rules:
         {rules}
 
-        Now, based on the standings paying attention on the matches won, lost and draw, upcoming matches, and rules, explain what the team needs to do to qualify.
-        ONLY use the remaining group matches and the current status of the group. DO NOT include already played matches in the analysis. Qualification depends on possible outcomes of upcoming group matches only.
-        Be specific. Mention possible scenarios (e.g., win + X team draws, or tie-breakers). Be clear, and answer in {language} language.
+    
+
+        Now, based on the standings paying attention on the matches won, lost and draw, the points of each team, upcoming matches, and rules, explain what the team needs to do to qualify.
+        ONLY use the remaining group matches and the current status of the group. DO NOT include already played matches in the analysis.
+        Qualification depends on possible outcomes of upcoming group matches only.
+        Be specific. Mention possible scenarios (e.g., win + X team draws, or tie-breakers).
+        1. If qualification is **mathematically impossible**, explain this clearly and briefly. Do NOT describe hypothetical or impossible scenarios.
+        2. If qualification is **still possible**, provide a clear and specific explanation of what needs to happen:
+        - Include required match outcomes and tie-breaker situations.
+        - Use current standings, points, goal difference, and match data.
+        - Only consider the remaining group matches. Ignore matches that have already been played.
+        Be clear, and answer in {language} language.
 
         Final Answer:"""
     )
