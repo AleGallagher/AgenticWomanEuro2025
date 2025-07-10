@@ -134,6 +134,16 @@ class SQLAgent:
                         - stage_id (INT): The unique identifier for the stage, primary key.
                         - stage_name (TEXT or VARCHAR): The name of the stage. Example: "Group Stage", "Quarter Finals", "Semi Finals", "Final".
                         """,
+                    "match_events": """Table of match details, such as goals, yellow cards, and red cards. Use this table for questions related to a specific match, such as "who scored the goal in the match between Spain and Portugal?" or "who received a yellow card in the match between Spain and Portugal?" or "what are the details of the match between Spain and Portugal?".
+                        Columns:
+                        - event_id (INT): The unique identifier for the event, primary key.
+                        - match_id (INT): The identifier for the match, references matches.match_id.
+                        - team_id (INT): The identifier for the team involved in the event, references teams.team_id.
+                        - player_id (INT): The identifier for the player involved in the event, references players.player_id.
+                        - related_player_id (INT): The identifier for the player auxiliar of the event, such as assistant, or substitution in, references players.player_id.
+                        - type (TEXT or VARCHAR): The type of event (e.g., "GOAL", "YELLOW_CARD", "RED_CARD", "SUBSTITUTION", "SELF_GOAL", "VAR_CHECK").
+                        - minute (INT): The minute of the event in minutes.
+                        """,
                     "matches": """Table of matches of the competition.
                         **CRITICAL INSTRUCTION:** When querying matches, you **MUST ALWAYS** JOIN with the 'teams' table (on home_team_id and away_team_id to teams.team_id) to select the `teams.country` for display, and **MUST ALWAYS** JOIN with the 'stadiums' table (on stadium_id to stadiums.stadium_id) to select `stadiums.stadium_name`. Do not return team_ids or stadium_ids in the final SELECT if names are available.
                         Columns:
@@ -345,6 +355,18 @@ class SQLAgent:
                                 OR
                                 (th.country = 'Portugal' AND ta.country = 'Spain');
                         For queries like "previous matches between [Team A] and [Team B]" or "matches before the Euro," always use the `historical_matches` table joined with `teams` for team names and do a summary with the total of victories, losses, and draws for each team.
+                        For queries related to match details or specific match like goals, yellow cards, or red cards, you **MUST** use the table `match_events` and join the `match_events` table with `matches`, `teams`, and `players` to get the relevant information.
+                        For example, if the user asks "who commited the goals in match between Spain and Portugal?", you would query:
+                                SELECT 
+                                    *
+                            FROM match_events me
+                            JOIN matches m ON me.match_id = m.match_id
+                            JOIN teams t ON me.team_id = t.team_id
+                            JOIN players p ON me.player_id = p.player_id
+                            WHERE m.home_team_id = (SELECT team_id FROM teams WHERE country = 'Spain')
+                            AND m.away_team_id = (SELECT team_id FROM teams WHERE country = 'Portugal')
+                            AND me.type = 'GOAL';
+
                         A query that only returns IDs like `SELECT m.match_id, m.home_team_id, m.away_team_id FROM matches m ... WHERE g.group_name = 'B'` is **INCORRECT AND STRICTLY FORBIDDEN** if names can be retrieved.
                         **Never include IDs in the response.
                         **If a query returns no results, try rewriting the query using LEFT JOINs instead of regular JOINs (especially for teams and stadiums tables) to include matches even if some related data is missing.**
@@ -354,7 +376,7 @@ class SQLAgent:
                 """
             db = SQLDatabase.from_uri(
                     os.getenv("POSTGRES_HOST"),
-                    include_tables=["teams", "players", "players_stats", "groups", "stadiums", "competition_stages", "matches", "group_standings", "team_match_stats", "historical_matches"],
+                    include_tables=["teams", "players", "players_stats", "groups", "stadiums", "competition_stages", "matches", "group_standings", "team_match_stats", "historical_matches", "match_events"],
                     sample_rows_in_table_info=2,
                     custom_table_info=custom_table_info_dict
             )
