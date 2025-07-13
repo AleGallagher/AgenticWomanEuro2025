@@ -64,8 +64,8 @@ async def sendMessage(
     except Exception as e:
         print(e)
         print(f"Error while invoking agent executor: {e}")
-        return {"output": "Sorry, I cannot answer this question now."}
-    
+        return {"output": "Sorry, I cannot answer this question now. Please try a different request or rephrase your question."}
+
 @app.post("/feedback")
 async def sendFeedback(feedback: FeedbackDto):
     """
