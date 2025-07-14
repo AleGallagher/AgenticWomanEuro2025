@@ -310,9 +310,9 @@ class SQLAgent:
                         7. If zero rows → return "No results found." (never invent data).
                         8. Do not just describe the SQL query. Always call the appropriate tool to execute the SQL and return the results unless explicitly told to explain the query only.
 
-                        When you answer:
-                        • Step 1 – PLAN: write a one-line plan such as
-                        "Plan: join matches→teams→stadiums, filter group = 'B'."
+                        MANDATORY: You must follow all the following 5 steps in order for every database-related query.
+                        If any step is skipped, the response is invalid and must be regenerated:
+                        • Step 1 – PLAN: write a one-line plan such as "Plan: join matches→teams→stadiums, filter group = 'B'."
                         • Step 2 – SQL: output exactly one syntactically-correct query.
                         • Step 3 – SELF-CHECK: tick each item below before executing.  
                         - [ ] Uses LEFT JOIN for teams & stadiums  
