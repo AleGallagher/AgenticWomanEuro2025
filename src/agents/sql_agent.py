@@ -313,12 +313,13 @@ class SQLAgent:
                         When you answer:
                         • Step 1 – PLAN: write a one-line plan such as
                         "Plan: join matches→teams→stadiums, filter group = 'B'."
-                        • Step 2 – SQL: output exactly one syntactically-correct query.  Do NOT explain.
+                        • Step 2 – SQL: output exactly one syntactically-correct query.
                         • Step 3 – SELF-CHECK: tick each item below before executing.  
                         - [ ] Uses LEFT JOIN for teams & stadiums  
                         - [ ] No IDs in SELECT list  
                         - [ ] ILIKE used for names (if filter)  
-                        • Step 4 – EXECUTE: you MUST call the SQL execution tool (`sql_db_query`) with that query.
+                        • Step 4 – EXECUTE: you MUST call the SQL execution tool (`sql_db_query`) using the exact SQL query above.
+                        - Do NOT skip this. If you don't call the tool, the task is incomplete.
                         • Step 5 – RESULT: display the returned results clearly. If no rows are returned, say: “No results found.”
 
                         ---
