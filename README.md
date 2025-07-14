@@ -70,3 +70,6 @@ Feedback, ideas, and contributions are very welcome!
 ## 🔗 Links
 [![portfolio](https://img.shields.io/badge/my_portfolio-000?style=for-the-badge&logo=ko-fi&logoColor=white)](https://github.com/AleGallagher)
 [![linkedin](https://img.shields.io/badge/linkedin-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/alejandro-sandler-66ba4254/)
+
+## 📄 License
+This project is licensed under the MIT License – see the [LICENSE](./LICENSE) file for details
