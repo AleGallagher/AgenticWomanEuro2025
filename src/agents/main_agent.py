@@ -36,7 +36,7 @@ class MainAgent:
             Tool.from_function(
                 name="SQLQueryTool",
                 description="Use for specific data such as coach names, team information, player details, player lists, scores, and matches. Example: 'Who is the coach of England?' or 'who play today'",
-                func=lambda **kwargs: "placeholder",  # this won't be called; just for LLM awareness
+                func=lambda **kwargs: "placeholder",
             ),
             Tool.from_function(
                 name="agentic_rag",
@@ -60,7 +60,11 @@ class MainAgent:
         """Translate the question to the specified language."""
         translation_llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
         translation_prompt = PromptTemplate.from_template(
-            "Translate the following question to English:\n\n{question}"
+            """Translate the following question to English.
+        ⚠️  DO NOT translate names of people, clubs, stadiums, or cities.
+        ✅  DO translate country or national team names into their English form
+            (e.g., 'España' → 'Spain', 'Alemania' → 'Germany').
+            Return only the translated question.:\n\n{question}"""
         )
         translated_question = translation_llm.invoke(translation_prompt.format(question=question))
         return translated_question.content.strip()
