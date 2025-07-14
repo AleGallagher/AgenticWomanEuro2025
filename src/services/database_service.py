@@ -1,7 +1,9 @@
 from sqlalchemy import create_engine, MetaData, Table, Column, String, Text
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import OperationalError
 import uuid
 import os
+import time
 
 class DatabaseService:
     def __init__(self):
@@ -32,19 +34,41 @@ class DatabaseService:
         Args:
             user_id (str): The unique identifier for the user.
             question (str): The question asked by the user.
+            original_question (str): The original question asked by the user.
+            country (str): The country associated with the user.
             response (str): The response generated for the question.
+            question_language (str): The language of the question.
+            tool (str): The tool used to generate the response.
+            retries (int): Number of retry attempts in case of failure.
+            delay (int): Delay (in seconds) between retries.
         """
-        with self.SessionLocal() as session:
-            session.execute(
-                self.question_answer_table.insert().values(
-                    id=str(uuid.uuid4()),
-                    country=country,
-                    user_id=user_id,
-                    question=question,
-                    original_question=original_question,
-                    response=response,
-                    question_language=question_language,
-                    tool=tool,
-                )
-            )
-            session.commit()
+        attempt = 0
+        retries = 3
+        delay = 2
+        while attempt < retries:
+            try:
+                with self.SessionLocal() as session:
+                    session.execute(
+                        self.question_answer_table.insert().values(
+                            id=str(uuid.uuid4()),
+                            country=country,
+                            user_id=user_id,
+                            question=question,
+                            original_question=original_question,
+                            response=response,
+                            question_language=question_language,
+                            tool=tool,
+                        )
+                    )
+                    session.commit()
+                    return
+            except OperationalError as e:
+                attempt += 1
+                print(f"Attempt {attempt} failed: {e}")
+                if attempt < retries:
+                    print(f"Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                else:
+                    print("All retry attempts failed.")
+            except Exception as e:
+                print(f"An unexpected error occurred: {e}")
