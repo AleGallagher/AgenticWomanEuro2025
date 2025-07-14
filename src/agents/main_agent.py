@@ -35,12 +35,30 @@ class MainAgent:
         tools = [
             Tool.from_function(
                 name="SQLQueryTool",
-                description="Use for specific data such as coach names, team information, player details, player lists, scores, and matches. Example: 'Who is the coach of England?' or 'who play today'",
+                description=(
+                    "Use this tool for specific, structured data. "
+                    "Examples include: coach names, team information, player lists, match schedules, scores, and live tournament stats."
+                    "Also use this for **statistics or aggregates** like totals, averages, and per-match metrics. "
+                    "Example questions:\n"
+                    "- 'Who is the coach of England?'\n"
+                    "- 'Who plays today?'\n"
+                    "- 'Which players scored the most goals?'\n"
+                    "- 'How many substitutions happen on average per match?'\n"
+                    "- 'Total goals by Spain?'"
+                ),
                 func=lambda **kwargs: "placeholder",
             ),
             Tool.from_function(
                 name="agentic_rag",
-                description="Use this for general, historical knowledge questions or open-ended information about the Women's Eurocup 2025. Example: 'What can you say about Spain?' or 'Is there VAR?' or 'When will start the cup? or Top Goal Scorers in the hostory'",
+                description=(
+                    "Use this tool for general background, historical knowledge, or open-ended questions "
+                    "about the Women's Eurocup 2025. This includes rules (e.g., VAR), past tournaments, hosts, and top scorers in history. "
+                    "Examples:\n"
+                    "- 'What can you say about Spain?'\n"
+                    "- 'Is there VAR?'\n"
+                    "- 'When does the cup start?'\n"
+                    "- 'Top goal scorers in tournament history?'"
+                ),
                 func=lambda **kwargs: "placeholder"
             ),
             Tool.from_function(
