@@ -213,7 +213,7 @@ class AgenticRAG:
         # Prompt
         prompt = """
                 You are an assistant for question-answering tasks about the Woman Eurocup 2025. Use the following pieces of retrieved context to answer the question.
-                If you don't know the answer, reply accordingly without inventing or hallucinating data, suggesting a different request or rephrase the question.
+                If you don't know the answer, reply accordingly without inventing or hallucinating data and suggesting a different request or rephrase the question.
                 Make sure your answer is relevant to the question and it is answered from the context only and in {language} language.
                 Question: {question} 
                 Context: {context} 
