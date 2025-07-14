@@ -313,7 +313,7 @@ class SQLAgent:
                         When you answer:
                         • Step 1 – PLAN: write a one-line plan such as
                         "Plan: join matches→teams→stadiums, filter group = 'B'."
-                        • Step 2 – SQL: output exactly one syntactically-correct query.
+                        • Step 2 – SQL: output exactly one syntactically-correct query.  Do NOT explain.
                         • Step 3 – SELF-CHECK: tick each item below before executing.  
                         - [ ] Uses LEFT JOIN for teams & stadiums  
                         - [ ] No IDs in SELECT list  
