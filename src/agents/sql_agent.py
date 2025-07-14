@@ -71,10 +71,15 @@ class SQLAgent:
         executor = AgentExecutor(agent=agent, tools=tools, max_iterations=10, handle_parsing_errors=True)
 
         def run_agent(state: State) -> dict:
-            result = executor.invoke({"input": state["input"], "language": state["question_language"]})
-            if "agent stopped due to iteration limit or time limit." in result["output"].lower():
-                return {"messages": [AIMessage(content="Seems that there are no results for this question. Can I help you with something else?")]}
-            return {"messages": [AIMessage(content=result["output"])]}
+            try:
+                result = executor.invoke({"input": state["input"], "language": state["question_language"]})
+                if "agent stopped due to iteration limit or time limit." in result["output"].lower():
+                    return {"messages": [AIMessage(content="Seems that there are no results for this question. Can I help you with something else?")]}
+                return {"messages": [AIMessage(content=result["output"])]}
+            except Exception as e:
+                print(f"Error in SQL Agent: {str(e)}")
+                error_message = f"An error occurred while processing your request. Please try a different request or rephrase your question."
+                return {"messages": [AIMessage(content=error_message)]} 
         return run_agent
     
     def _setup_sql_toolkit(self):
