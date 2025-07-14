@@ -68,7 +68,7 @@ class SQLAgent:
     def _create_reasoning_node(self):
         tools, prompt = self._setup_sql_toolkit()
         agent = create_openai_functions_agent(llm=self.llm, tools=tools, prompt=prompt)
-        executor = AgentExecutor(agent=agent, tools=tools, max_iterations=10, handle_parsing_errors=True, verbose=True)
+        executor = AgentExecutor(agent=agent, tools=tools, max_iterations=10, handle_parsing_errors=True)
 
         def run_agent(state: State) -> dict:
             result = executor.invoke({"input": state["input"], "language": state["question_language"]})
