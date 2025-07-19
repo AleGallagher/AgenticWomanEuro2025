@@ -1,6 +1,5 @@
 from langgraph.graph import StateGraph
 from langchain_core.messages import ToolMessage, AIMessage
-from langchain_core.tools import Tool
 from langchain_openai import ChatOpenAI
 from langgraph.graph.message import add_messages
 from tools.sql_tool import get_sql_tool
@@ -31,42 +30,20 @@ class MainAgent:
         self.database_service = DatabaseService()
 
     def _get_tools(self):
-        """Bind tools to the LLM."""
-        tools = [
-            Tool.from_function(
-                name="SQLQueryTool",
-                description=(
-                    "Use this tool for specific, structured data. "
-                    "Examples include: coach names, team information, player lists, match schedules, scores, and live tournament stats."
-                    "Also use this for **statistics or aggregates** like totals, averages, and per-match metrics. "
-                    "Example questions:\n"
-                    "- 'Who is the coach of England?'\n"
-                    "- 'Who plays today?'\n"
-                    "- 'Which players scored the most goals?'\n"
-                    "- 'How many substitutions happen on average per match?'\n"
-                    "- 'Total goals by Spain?'"
-                ),
-                func=lambda **kwargs: "placeholder",
-            ),
-            Tool.from_function(
-                name="agentic_rag",
-                description=(
-                    "Use this tool for general background, historical knowledge, or open-ended questions "
-                    "about the Women's Eurocup 2025. This includes rules (e.g., VAR), past tournaments, hosts, and top scorers in history. "
-                    "Examples:\n"
-                    "- 'What can you say about Spain?'\n"
-                    "- 'Is there VAR?'\n"
-                    "- 'When does the cup start?'\n"
-                    "- 'Top goal scorers in tournament history?'"
-                ),
-                func=lambda **kwargs: "placeholder"
-            ),
-            Tool.from_function(
-                name="qualification_tool",
-                description="Use to know what need a team to qualify, pass to the next stage. Example: 'What need Spain to qualify?', or 'What need Spain to qualify to the next stage?'",
-                func=lambda **kwargs: "placeholder"
-            )
-        ]
+        """Return the tools to bind to the LLM."""
+        tools = [get_sql_tool,
+                agentic_rag_stream,
+                get_qualification_options
+                ]
+        return tools
+
+    def _get_dict_tools(self):
+        """Return a dictionary of tools."""
+        tools = {
+            "SQLQueryTool": get_sql_tool,
+            "agentic_rag": agentic_rag_stream,
+            "qualification_tool": get_qualification_options
+        }
         return tools
 
     def _agent_node(self, state):
@@ -90,36 +67,20 @@ class MainAgent:
     def _tool_executor(self, state):
         tool_call = state["messages"][-1].tool_calls[0]
         tool_name = tool_call["name"]
-        tool_args = tool_call["args"]
-        original_question = tool_args.get("__arg1")
-        print("original_question", original_question)
-        last_question = self._translate_question(original_question) if state["question_language"] != "English" else original_question
-        print("translated question", last_question)
+        tool_args = tool_call["args"].copy()
+        original_question = tool_args.get("question")
 
-        if tool_name == "SQLQueryTool":
-            tool_func = get_sql_tool.invoke({"model": self.model,
-                 "agent_input": last_question,
-                "question_language": state["question_language"]}
-            )
-        elif tool_name == "agentic_rag":
-            tool_func = agentic_rag_stream.invoke({
-                "vector_store": self.vector_store,
-                "question": last_question,
-                "language": state["question_language"]
-            })
-        elif tool_name == "qualification_tool":
-            tool_func = get_qualification_options.invoke({
-                "model": self.model,
-                "agent_input": last_question,
-                "question_language": state["question_language"]
-            })
-        else:
-            raise ValueError(f"Unknown tool: {tool_name}")
-        result = tool_func
+        tool_args["question"] = self._translate_question(original_question) if state["question_language"] != "English" else original_question
+        tool_args["model"] = self.model
+        tool_args["question_language"] = state["question_language"]
+        tool_args["vector_store"] = self.vector_store
+        print("translated question", tool_args["question"])
+
+        result = self._get_dict_tools()[tool_name].invoke(tool_args)
         self.database_service.save_question_answer(
             user_id =  state["user_id"],
             country = state["country"],
-            question =  last_question,
+            question =  tool_args["question_language"],
             original_question = original_question,
             response = result,
             question_language = state["question_language"],
