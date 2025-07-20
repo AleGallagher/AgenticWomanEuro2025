@@ -1,5 +1,8 @@
+from typing import Annotated
 from langchain.tools import tool
 from agents.sql_agent import SQLAgent
+from langchain_core.tools import InjectedToolArg
+from langchain_openai import ChatOpenAI
 
 @tool("SQLQueryTool", return_direct=True, description=(
                     "Use this tool for specific, structured data. "
@@ -13,12 +16,12 @@ from agents.sql_agent import SQLAgent
                     "- 'Total goals by Spain?'"
                 )
 )
-def get_sql_tool(model, agent_input: str = "", question_language: str = "English"):
+def get_sql_tool(model: Annotated[ChatOpenAI, InjectedToolArg], question: str = "", question_language: Annotated[str, InjectedToolArg] = "English"):
     """
     Use for specific data such as coach names, team information, player lists, scores, and matches
     """
     initial_state = {
-    "input": agent_input,
+    "input": question,
     "question_language": question_language,
     }
     graph = SQLAgent(model)
