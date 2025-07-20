@@ -80,7 +80,7 @@ class MainAgent:
         self.database_service.save_question_answer(
             user_id =  state["user_id"],
             country = state["country"],
-            question =  tool_args["question_language"],
+            question =  tool_args.get("question"),
             original_question = original_question,
             response = result,
             question_language = state["question_language"],
