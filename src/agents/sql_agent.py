@@ -146,8 +146,9 @@ class SQLAgent:
                         - team_id (INT): The identifier for the team involved in the event, references teams.team_id.
                         - player_id (INT): The identifier for the player involved in the event, references players.player_id.
                         - related_player_id (INT): The identifier for the player auxiliar of the event, such as assist of a goal, or substitution in, references players.player_id.
-                        - event_type (TEXT or VARCHAR): The type of event (e.g., "GOAL", "YELLOW_CARD", "RED_CARD", "SUBSTITUTION", "SELF_GOAL", "VAR_CHECK").
+                        - event_type (TEXT or VARCHAR): The type of event (e.g., "GOAL","PENALTY_GOAL", "SELF_GOAL", "PENALTY_FAIL", "YELLOW_CARD", "RED_CARD", "SUBSTITUTION", "VAR_CHECK", "PENALTY_SHOOTOUT_GOAL", "PENALTY_SHOOTOUT_MISS").
                         - minute (INT): The minute of the event in minutes.
+                        - match_period (TEXT or VARCHAR): The period of the match when the event occurred (e.g., "1H": First Half, "2H": Second Half, "ET1": Extra Time 1, "ET2": Extra Time 2, "PEN": Penalty Shootout).
                         """,
                     "matches": """Table of matches of the competition.
                         **CRITICAL INSTRUCTION:** When querying matches, you **MUST ALWAYS** JOIN with the 'teams' table (on home_team_id and away_team_id to teams.team_id) to select the `teams.country` for display, and **MUST ALWAYS** JOIN with the 'stadiums' table (on stadium_id to stadiums.stadium_id) to select `stadiums.stadium_name`. Do not return team_ids or stadium_ids in the final SELECT if names are available.
@@ -160,6 +161,10 @@ class SQLAgent:
                         - home_score (INT): The score of the first team.
                         - away_score (INT): The score of the second team.
                         - match_datetime (DATE or TIMESTAMP): The date and time of the match.
+                        - extra_time (BOOLEAN): Whether the match went to extra time. Mention this only if the match went to extra time.
+                        - penalty_shootout (BOOLEAN): Whether the match went to a penalty shootout. Mention this only if the match went to a penalty shootout.
+                        - home_penalties_score (INT): The penalty score of the home team, if applicable. Mention this only if the match went to a penalty shootout.
+                        - away_penalties_score (INT): The penalty score of the away team, if applicable. Mention this only if the match went to a penalty shootout.
                         Example: To find all matches in a Semi-final stage, you would query "SELECT matches.match_datetime, t1.country AS home_team, t2.country AS away_team, stadiums.stadium_name, stadiums.city FROM matches
                                             JOIN competition_stages on competition_stages.stage_id = matches.stage_id
                                             LEFT JOIN teams t1 on t1.team_id = matches.home_team_id
@@ -417,6 +422,35 @@ class SQLAgent:
 						LEFT JOIN teams away_team ON away_team.team_id = m.away_team_id
                         WHERE p.player_name ILIKE '%putellas%'
 
+                        Question: "How was the match between France and Germany?"
+                        SELECT 
+                        m.match_datetime,
+                        m.extra_time,
+                        m.penalty_shootout,
+                        ht.country AS home_team,
+                        m.home_score,
+                        m.home_penalties_score,
+                        at.country AS away_team,
+                        m.away_score,
+                        m.away_penalties_score,
+                        s.stadium_name,
+                        ts.possession_percent,
+                        ts.shots,
+                        ts.shots_on_target,
+                        ts.passes,
+                        ts.accurate_passes,
+                        ts.fouls,
+                        ts.corners,
+                        ts.offsides
+                    FROM matches m 
+                    LEFT JOIN teams ht ON ht.team_id = m.home_team_id 
+                    LEFT JOIN teams at ON at.team_id = m.away_team_id 
+                    LEFT JOIN stadiums s ON s.stadium_id = m.stadium_id 
+                    LEFT JOIN team_match_stats ts ON m.match_id = ts.match_id
+                    WHERE 
+                        (ht.country ILIKE '%France%' AND at.country ILIKE '%Germany%') OR 
+                        (ht.country ILIKE '%Germany%' AND at.country ILIKE '%France%');
+   
                         FORBIDDEN OUTPUTS (NEVER do this):
                         - Return only IDs without names (SELECT team_id FROM matches ...)
                         - Assume table/column names — always inspect schema first
