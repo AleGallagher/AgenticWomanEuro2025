@@ -26,9 +26,8 @@ class FAISSStore(BaseStore):
     
     def get_vector_store(self):
         return self.vector_store
-    
-    def load_vector_store(self):
-        database_name = r"f:\Python\AgenticEuro2025\src\rag\euro2025"
+
+    def load_vector_store(self, database_name = r"f:\Python\AgenticEuro2025\src\rag\euro2025"):
         self.vector_store = FAISS.load_local(database_name, self.embedding_model, allow_dangerous_deserialization=True)
         self.index = self.vector_store.index
         self.docstore = self.vector_store.docstore
