@@ -1,6 +1,8 @@
-from .base_store import BaseStore
-from langchain_pinecone import PineconeVectorStore
 import os
+
+from langchain_pinecone import PineconeVectorStore
+
+from .base_store import BaseStore
 
 class PineconeStore(BaseStore):
     def __init__(self, embedding_model):

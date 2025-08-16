@@ -1,15 +1,16 @@
-from langgraph.graph import StateGraph
-from langchain_core.messages import ToolMessage, BaseMessage, AIMessage
-from langchain_openai import ChatOpenAI
-from langgraph.graph.message import add_messages
-from tools.sql_tool import get_sql_tool
-from tools.agentic_rag_tool import agentic_rag_stream
-from tools.qualification_tool import get_qualification_options
 from typing import Annotated, Sequence, TypedDict
-from services.database_service import DatabaseService
-from langgraph.graph import END
+
 from langchain.prompts import PromptTemplate
+from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
+from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, StateGraph
+from langgraph.graph.message import add_messages
+
+from services.database_service import DatabaseService
+from tools.agentic_rag_tool import agentic_rag
+from tools.qualification_tool import get_qualification_options
+from tools.sql_tool import get_sql_tool
 
 class State(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
@@ -27,12 +28,11 @@ class MainAgent:
         self.graph = self._build_graph()
         self.vector_store = vector_store
         self.database_service = DatabaseService()
-        
 
     def _get_tools(self):
         """Return the tools to bind to the LLM."""
         tools = [get_sql_tool,
-                agentic_rag_stream,
+                agentic_rag,
                 get_qualification_options
                 ]
         return tools
@@ -41,7 +41,7 @@ class MainAgent:
         """Return a dictionary of tools."""
         tools = {
             "SQLQueryTool": get_sql_tool,
-            "agentic_rag": agentic_rag_stream,
+            "agentic_rag": agentic_rag,
             "qualification_tool": get_qualification_options
         }
         return tools
@@ -94,7 +94,6 @@ class MainAgent:
                 print(f"Error executing tool {tool_call['name']}: {e}")
                 results.append(ToolMessage(content=f"Error : {e}", tool_call_id=tool_call["id"], name=tool_call["name"]))
         return {"messages": results}
-
 
     def _build_graph(self):
         def validate_question_node(state):
@@ -192,3 +191,6 @@ class MainAgent:
         )
         response = validation_llm.invoke(validation_prompt.format(question=question))
         return response.content.strip().upper() == "YES"
+    
+    def __call__(self, state: State, config):
+        return self.graph.invoke(state, config)

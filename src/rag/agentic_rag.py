@@ -1,23 +1,25 @@
-from typing import Annotated, Sequence, TypedDict, Literal, Optional
+import os
 from operator import itemgetter
-from pydantic import BaseModel, Field
-from langgraph.graph.message import add_messages
-from langgraph.prebuilt import tools_condition, ToolNode
-from langgraph.graph import END, START, StateGraph
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
-from langchain_core.messages import BaseMessage, HumanMessage
-from langchain_openai import ChatOpenAI
+from typing import Annotated, Literal, Optional, Sequence, TypedDict
+
 from langchain.tools import Tool
+from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
+from langchain_openai import ChatOpenAI
+from langgraph.graph import END, START, StateGraph
+from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode, tools_condition
+from pydantic import BaseModel, Field
+
 from rag.metadata_model import QuestionMetadataOutput
 from rag.vector_stores.base_store import BaseStore
-import os
 
 class State(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
     question_language: str
     agent_action: Optional[str]
-    rewrite_count: int
+    rewrite_count: int = 0
     question_metadata: QuestionMetadataOutput
 
 class AgenticRAG:
@@ -51,8 +53,8 @@ class AgenticRAG:
         graph_builder.add_node("extractMetaData", self._extract_metadata)
         graph_builder.add_node("agent", self._agent)
         graph_builder.add_node("retrieverTool", ToolNode([self._get_retrieval_tool()]))
-        graph_builder.add_node("rewrite", self._rewrite)
-        graph_builder.add_node("generate", self._generate)
+        graph_builder.add_node("rewrite", self._rewrite_question)
+        graph_builder.add_node("generate", self._generate_response)
         graph_builder.add_node("notfound", self._not_found)
 
         graph_builder.add_edge(START, "extractMetaData")
@@ -96,13 +98,13 @@ class AgenticRAG:
         Returns:
             str: A decision for whether the documents are relevant or not
         """
-        class grade(BaseModel):
+        class Grade(BaseModel):
             """Confidence score for relevance check."""
             confidence_score: float = Field(
                 description="Relevance confidence score between 0 and 1, where 1 is highly relevant."
             )
 
-        llm_with_structured_output = self.llm.with_structured_output(grade)
+        llm_with_structured_output = self.llm.with_structured_output(Grade)
         messages = state["messages"]
         last_message = messages[-1]
         question = messages[0].content
@@ -204,8 +206,7 @@ class AgenticRAG:
         response = self.llm.invoke(combined_prompt.format(question=question, language=language))
         return {"messages": [response]}
 
-
-    def _rewrite(self, state):
+    def _rewrite_question(self, state):
         """
         Transform the query to produce a better question.
 
@@ -237,7 +238,7 @@ class AgenticRAG:
         response = self.llm.invoke(msg)
         return {"agent_action" : "agent", "messages": [response], "rewrite_count": count}
 
-    def _generate(self, state):
+    def _generate_response(self, state):
         """
         Generate answer
 
@@ -272,4 +273,6 @@ class AgenticRAG:
         # Run
         response = rag_chain.invoke({"question": question, "language": state.get("question_language")})
         return {"messages": [response]}
-    
+
+    def __call__(self, state: State):
+        return self.graph.invoke(state)

@@ -1,17 +1,20 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from dto.message_dto import MessageDto
-from dto.feedback_dto import FeedbackDto
-from services.telegram_service import TelegramService
-from config.errors.exceptions import InvalidRequestException
-from config.dependencies import get_model, get_store
-from config.errors.handlers import register_exception_handlers
-from config.logging_config import setup_logging
-from langchain_core.messages import HumanMessage
-from agents.main_agent import MainAgent
-from dotenv import load_dotenv
 import logging
 import os
+
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from langchain_core.messages import HumanMessage
+
+from agents.main_agent import MainAgent
+from config.dependencies import get_model, get_store
+from config.errors.exceptions import InvalidRequestException
+from config.errors.handlers import register_exception_handlers
+from config.logging_config import setup_logging
+from dto.feedback_dto import FeedbackDto
+from dto.message_dto import MessageDto
+from services.telegram_service import TelegramService
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -59,7 +62,7 @@ async def sendMessage(
             "country": message.country,
         }
         config = {"configurable": {"thread_id": message.session_id}}
-        result = agent.graph.invoke(initial_state, config)
+        result = agent(state=initial_state, config=config)
         return {"output": result["messages"][-1].content}
     except Exception as e:
         print(e)

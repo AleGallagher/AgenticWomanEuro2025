@@ -1,9 +1,10 @@
-from sqlalchemy import create_engine, MetaData, Table, Column, String, Text
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.exc import OperationalError
-import uuid
 import os
 import time
+import uuid
+
+from sqlalchemy import Column, MetaData, String, Table, Text, create_engine
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import sessionmaker
 
 class DatabaseService:
     def __init__(self):
@@ -32,15 +33,14 @@ class DatabaseService:
         Store the question and response in the database.
 
         Args:
+            id (str): The unique identifier for the question-answer pair.
+            country (str): The country associated with the user.
             user_id (str): The unique identifier for the user.
             question (str): The question asked by the user.
             original_question (str): The original question asked by the user.
-            country (str): The country associated with the user.
             response (str): The response generated for the question.
             question_language (str): The language of the question.
             tool (str): The tool used to generate the response.
-            retries (int): Number of retry attempts in case of failure.
-            delay (int): Delay (in seconds) between retries.
         """
         attempt = 0
         retries = 3

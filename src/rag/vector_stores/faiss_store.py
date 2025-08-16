@@ -1,7 +1,7 @@
 import faiss
-import numpy as np
-from langchain_community.vectorstores import FAISS
 from langchain_community.docstore.in_memory import InMemoryDocstore
+from langchain_community.vectorstores import FAISS
+
 from .base_store import BaseStore
 
 class FAISSStore(BaseStore):

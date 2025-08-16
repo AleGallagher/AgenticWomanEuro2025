@@ -14,7 +14,7 @@ Group Stage:
     3. Higher number of goals scored in the matches played among the teams in question (head-to-head goals scored).
 """
 
-def handle_qualification_question(llm, user_input, question_language):
+def handle_qualification_question(llm, question, question_language):
     """
     Handle a user question about team qualification scenarios in the Women's Eurocup 2025.
 
@@ -23,14 +23,14 @@ def handle_qualification_question(llm, user_input, question_language):
     a language model to provide a detailed answer about what a team needs to do to qualify.
 
     Args:
-        user_input (str): The user's question about team qualification.
+        question (str): The user's question about team qualification.
         llm: The language model instance used for generating the final answer.
 
     Returns:
         str: A detailed explanation of the qualification scenarios for the team in question.
     """
     # Step 1: Use SQLQueryTool to get current standings and upcoming matches
-    result = get_sql_tool.invoke({"model": llm, "agent_input": f"Get current group standings and upcoming matches for the group of the team mentioned in: '{user_input}'", "question_language": "English"})
+    result = get_sql_tool.invoke({"model": llm, "agent_input": f"Get current group standings and upcoming matches for the group of the team mentioned in: '{question}'", "question_language": "English"})
     sql_result = result
 
     rules_result = COMPETITION_RULES_TEXT
@@ -67,10 +67,10 @@ def handle_qualification_question(llm, user_input, question_language):
 
     llm_chain = prompt_template | llm
     answer = llm_chain.invoke({
-        "question": user_input,
+        "question": question,
         "sql_data": sql_result,
         "rules": rules_result,
-        "language": question_language
+        "language": question_language,
     })
 
     return answer

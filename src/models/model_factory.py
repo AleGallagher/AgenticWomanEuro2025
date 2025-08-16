@@ -1,5 +1,4 @@
 import json
-import os
 from pathlib import Path
 
 class ModelFactory:
@@ -26,7 +25,8 @@ class ModelFactory:
 
     def _create_ollama_model(self):
         """Create an Ollama model."""
-        from langchain_ollama import ChatOllama        
+        from langchain_ollama import ChatOllama
+
         # Create the Ollama model
         return ChatOllama(**self._get_config())
     

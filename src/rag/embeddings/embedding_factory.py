@@ -26,7 +26,8 @@ class EmbeddingFactory:
 
     def _create_ollama_embedding(self):
         """Create an Ollama embedding model."""
-        from langchain_ollama import OllamaEmbeddings        
+        from langchain_ollama import OllamaEmbeddings
+
         # Create the Ollama embedding model
         return OllamaEmbeddings(**self._get_config())
 
