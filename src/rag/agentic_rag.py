@@ -19,7 +19,7 @@ class State(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
     question_language: str
     agent_action: Optional[str]
-    rewrite_count: int
+    rewrite_count: int = 0
     question_metadata: QuestionMetadataOutput
 
 class AgenticRAG:
