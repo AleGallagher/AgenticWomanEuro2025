@@ -17,7 +17,7 @@ class PineconeStore(BaseStore):
         return [res.page_content for res in results]
 
     def delete(self, ids):
-        self.index.delete(ids=ids)
+        self.vector_store.delete(ids=ids)
 
     def get_vector_store(self):
         return self.vector_store

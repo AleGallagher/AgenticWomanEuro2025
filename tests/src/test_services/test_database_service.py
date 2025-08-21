@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 import sys
 import os
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../src')))
 
 from services.database_service import DatabaseService
 class TestDatabaseService(unittest.TestCase):
@@ -21,13 +21,14 @@ class TestDatabaseService(unittest.TestCase):
 
         user_id = "test_user_2"
         question = "What is the capital of Germany?"
+        original_question = "What is the capital of Germany?"
         country = "Germany"
         response = "Berlin"
         question_language = "German"
         tool = "test_tool_2"
 
         # WHEN
-        db_service.save_question_answer(user_id, question, country, response, question_language, tool)
+        db_service.save_question_answer(user_id, question, original_question, country, response, question_language, tool)
 
         # ASSERT
         mock_session.execute.assert_called_once()
