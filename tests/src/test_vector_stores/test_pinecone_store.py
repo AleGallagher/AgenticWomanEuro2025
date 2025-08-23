@@ -1,33 +1,30 @@
+import os
+import sys
 import unittest
 from unittest.mock import MagicMock, patch
-import sys
-import os
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../src')))
 
 from rag.vector_stores.pinecone_store import PineconeStore
 
 class TestPineconeStore(unittest.TestCase):
     @patch("rag.vector_stores.pinecone_store.PineconeVectorStore")
     def setUp(self, MockPineconeVectorStore):
-        # Mock the PineconeVectorStore instance
         self.mock_vector_store = MockPineconeVectorStore.from_existing_index.return_value
         self.mock_embedding_model = MagicMock()
-
-        # Set a dummy environment variable for PINECONE_INDEX
         os.environ["PINECONE_INDEX"] = "test-index"
-
-        # Create PineconeStore instance
         self.store = PineconeStore(embedding_model=self.mock_embedding_model)
 
     def test_add_documents(self):
+        # GIVEN
         chunks = [{"id": "1", "content": "test content"}]
-
+        # WHEN
         self.store.add_documents(chunks)
-
+        # THEN
         self.mock_vector_store.add_documents.assert_called_once_with(chunks)
 
     def test_search(self):
+        # GIVEN
         query = "test query"
         mock_results = [
             MagicMock(page_content="result 1"),
@@ -35,21 +32,25 @@ class TestPineconeStore(unittest.TestCase):
         ]
         self.mock_vector_store.similarity_search.return_value = mock_results
 
+        # WHEN
         results = self.store.search(query, top_k=2)
 
+        # THEN
         self.mock_vector_store.similarity_search.assert_called_once_with(query, k=2)
         self.assertEqual(results, ["result 1", "result 2"])
 
     def test_delete(self):
+        # GIVEN
         ids = ["1", "2"]
-
+        # WHEN
         self.store.delete(ids)
-
+        # THEN
         self.mock_vector_store.delete.assert_called_once_with(ids=ids)
 
     def test_get_vector_store(self):
+        # WHEN
         vector_store = self.store.get_vector_store()
-
+        # THEN
         self.assertEqual(vector_store, self.mock_vector_store)
 
     def test_save_data_base(self):
