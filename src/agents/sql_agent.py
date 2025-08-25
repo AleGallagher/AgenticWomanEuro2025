@@ -211,6 +211,10 @@ class SQLAgent:
                         - penalty_shootout (BOOLEAN): Whether the match went to a penalty shootout. Mention this only if the match went to a penalty shootout.
                         - home_penalties_score (INT): The penalty score of the home team, if applicable. Mention this only if the match went to a penalty shootout.
                         - away_penalties_score (INT): The penalty score of the away team, if applicable. Mention this only if the match went to a penalty shootout.
+                        - home_team_formation (TEXT): The formation style of the home team.
+                        - away_team_formation (TEXT): The formation style of the away team.
+                        - home_starting_players (INT[]): List of id of starting players of the home team.
+                        - away_starting_players (INT[]): List of id of starting players of the away team.
                         Example: To find all matches in a Semi-final stage, you would query "SELECT matches.match_datetime, t1.country AS home_team, t2.country AS away_team, stadiums.stadium_name, stadiums.city FROM matches
                                             JOIN competition_stages on competition_stages.stage_id = matches.stage_id
                                             LEFT JOIN teams t1 on t1.team_id = matches.home_team_id
@@ -497,6 +501,36 @@ class SQLAgent:
                         (ht.country ILIKE '%France%' AND at.country ILIKE '%Germany%') OR 
                         (ht.country ILIKE '%Germany%' AND at.country ILIKE '%France%');
    
+                    If the question ask about the line-up or formation of a team in a specific match, use the starting players from the `matches` table and the `players` table to get the player names, in order, the first is the goalkeeper. Always use player names, never IDs. And display the formation using the following format with the pitch and respect the the formation style (e.g. 4-3-3, 4-4-2, 3-5-2, etc.), this is an example for a 4-2-3-1 formation, whare *player1* should be replaced with the actual player name, and so on:
+                                            ⚽ FOOTBALL PITCH ⚽
+    
+                        ═══════════════════════════════════════════════════════════
+                        ║                                                         ║
+                        ║  🥅                  GOAL                         🥅   ║ 
+                        ║                                                         ║
+                        ║                    *player1*                            ║
+                        ║                      🧤 GK                              ║
+                        ║                                                         ║
+                        ║                                                         ║
+                        ║ *player2*   *player3*    *player4*        *player5*     ║
+                        ║     🛡️ DF       🛡️ DF       🛡️ DF       🛡️ DF         ║
+                        ║                                                         ║
+                        ║                                                         ║
+                        ║           *player6*                *player7*            ║
+                        ║            ⚙️ MD               ⚙️ MD                   ║
+                        ║                                                         ║
+                        ║                                                         ║
+                        ║  *player8*           *player9*        *player10*        ║
+                        ║   ⚡ MD             ⭐ MD             ⚡ MD            ║
+                        ║                                                         ║
+                        ║                                                         ║
+                        ║                    *player11*                           ║
+                        ║                     ⚽ FW                              ║
+                        ║                                                         ║
+                        ║  🥅                  GOAL                         🥅  ║
+                        ║                                                         ║
+                        ═══════════════════════════════════════════════════════════
+
                         FORBIDDEN OUTPUTS (NEVER do this):
                         - Return only IDs without names (SELECT team_id FROM matches ...)
                         - Assume table/column names — always inspect schema first
