@@ -146,7 +146,7 @@ class SQLAgent:
                         - is_captain (BOOLEAN): Whether the player is the captain of the team. Show this just if the player is the captain.
                         Example: To find a player named 'Aitana', you would query "SELECT player_name, age, player_position, club, is_captain FROM players WHERE player_name ILIKE '%Aitana%'".
                         """,
-                    "players_stats": """Table of stats of players.
+                    "players_stats_enriched": """Table of stats of players.
                         Columns:
                         - id (INTEGER or BIGINT): The primary key for the stats entry.
                         - player_id (INT): The identifier of the player these stats belong to, references players.player_id.
@@ -157,9 +157,10 @@ class SQLAgent:
                         - minutes_played (INT): Number of minutes played.
                         - yellow_cards (INT): Number of yellow cards received.
                         - red_cards (INT): Number of red cards received.
-                        When asked about a player's performance, always join `players_stats` with `players` and return all available stats for the player.
-                        Example: How is aitana performance? you would query select players_stats.goals, players_stats.assists, players_stats.penalties, players_stats.yellow_cards, players_stats.red_cards, players_stats.matches_played, players.player_name, players.player_position from players_stats left join players on players.player_id = players_stats.player_id WHERE players.player_name ilike '%Aitana%'".
-                        Example: What can you say about Aitana?  you would query select players_stats.goals, players_stats.assists, players_stats.penalties, players_stats.yellow_cards, players_stats.red_cards, players_stats.matches_played, players.player_name, players.player_position from players_stats left join players on players.player_id = players_stats.player_id WHERE players.player_name ilike '%Aitana%'".
+                        - mvp_count (INT): Number of times this player was MVP.
+                        When asked about a player's performance, always join `players_stats_enriched` with `players` and return all available stats for the player.
+                        Example: How is aitana performance? you would query select players_stats_enriched.goals, players_stats_enriched.assists, players_stats_enriched.penalties, players_stats_enriched.yellow_cards, players_stats_enriched.red_cards, players_stats_enriched.matches_played, players.player_name, players.player_position from players_stats_enriched left join players on players.player_id = players_stats_enriched.player_id WHERE players.player_name ilike '%Aitana%'".
+                        Example: What can you say about Aitana?  you would query select players_stats_enriched.goals, players_stats_enriched.assists, players_stats_enriched.penalties, players_stats_enriched.yellow_cards, players_stats_enriched.red_cards, players_stats_enriched.matches_played, players.player_name, players.player_position from players_stats_enriched left join players on players.player_id = players_stats_enriched.player_id WHERE players.player_name ilike '%Aitana%'".
                         """,
                     "teams": """Table of teams of the competition.
                         Columns:
@@ -215,6 +216,7 @@ class SQLAgent:
                         - away_team_formation (TEXT): The formation style of the away team.
                         - home_starting_players (INT[]): List of id of starting players of the home team.
                         - away_starting_players (INT[]): List of id of starting players of the away team.
+                        - mvp_player_id (INT): The identifier of the most valuable player of the match, references players.player_id.
                         Example: To find all matches in a Semi-final stage, you would query "SELECT matches.match_datetime, t1.country AS home_team, t2.country AS away_team, stadiums.stadium_name, stadiums.city FROM matches
                                             JOIN competition_stages on competition_stages.stage_id = matches.stage_id
                                             LEFT JOIN teams t1 on t1.team_id = matches.home_team_id
@@ -359,7 +361,7 @@ class SQLAgent:
                             – event_type = 'GOAL' → scorer is in player_id  
                             – event_type = 'GOAL' AND related_player_id IS NOT NULL → assistant is in related_player_id  
                             – event_type = 'SUBSTITUTION' → player_id = “in”, related_player_id = “out”
-                        • Use **players_stats** for aggregate or career questions
+                        • Use **players_stats_enriched** for aggregate or career questions
                             (total goals, total minutes, season tallies, leaderboards).
                         4. ALWAYS use `ILIKE '%value%'` for case-insensitive text matches.
                         5. ALWAYS use `LEFT JOIN` instead of `JOIN` when results may be incomplete or to ensure no records are excluded.
@@ -459,7 +461,7 @@ class SQLAgent:
 
                         Question: "How is Aitana performing?" or "Player stats for Aitana"
                         SELECT p.player_name, ps.goals, ps.assists, ps.matches_played, ps.yellow_cards, ps.red_cards
-                        FROM players_stats ps
+                        FROM players_stats_enriched ps
                         LEFT JOIN players p ON p.player_id = ps.player_id
                         WHERE p.player_name ILIKE '%aitana%';
 
@@ -541,7 +543,8 @@ class SQLAgent:
                 """
             db = SQLDatabase.from_uri(
                     os.getenv("POSTGRES_HOST"),
-                    include_tables=["teams", "players", "players_stats", "groups", "stadiums", "competition_stages", "matches", "group_standings", "team_match_stats", "historical_matches", "match_events"],
+                    view_support=True,
+                    include_tables=["teams", "players", "players_stats_enriched", "groups", "stadiums", "competition_stages", "matches", "group_standings", "team_match_stats", "historical_matches", "match_events"],
                     sample_rows_in_table_info=2,
                     custom_table_info=custom_table_info_dict
             )
