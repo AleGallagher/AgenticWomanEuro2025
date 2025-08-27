@@ -156,38 +156,45 @@ class MainAgent:
         """Validate if the question is related to football/soccer."""
         validation_llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
         validation_prompt = PromptTemplate.from_template(
-            """You are a validator for a football assistant. Determine if the following question is related to football/soccer, UEFA Euro championships, or football statistics.
-            
-            Football-related topics include:
-            - Players, teams, matches, tournaments, competitions
-            - Statistics, scores, goals, assists, saves
-            - Football history, records, achievements, trophies
-            - Qualifications, groups, standings, fixtures
-            - Penalty shootouts, penalties, fouls, cards
-            - Football tactics, formations, strategies
-            - Transfer news, player movements
-            - Match events, highlights, incidents, VAR
-            - Team lineups, substitutions
-            - Referees, officials, decisions
-            - Football venues, stadiums
-            
-            IMPORTANT: Questions about countries in a football context should be considered football-related.
-            For example, "What can you say about Spain?" in a football assistant context is asking about Spain's football team.
+        """You are a football/soccer question classifier. Your task is to determine if a question is related to football/soccer.
 
-            Examples of non-football questions:
-            - "What is the weather today?"
-            - "How do I cook pasta?"
-            - "What is the capital of France?"
-            
-            Examples of football questions:
-            - "Who scored in the match between Spain and Italy?"
-            - "Who committed penalties in the penalty shootout?"
-            - "Which teams qualified for the semifinals?"
-            - "What can you say about Spain?"
-            
-            Answer only with "YES" or "NO".
+        A question is football-related if it mentions or asks about ANY of these topics:
+        - Players (individual or multiple): names, performance, statistics, achievements
+        - Teams: club teams, national teams, lineups, tactics
+        - Matches/Games: scores, results, events, highlights
+        - Tournaments/Competitions: UEFA Euro, World Cup, leagues, championships
+        - Football statistics: goals, assists, saves, MVP, player of the match, awards
+        - Football history: records, achievements, trophies, past events
+        - Football elements: penalties, fouls, cards, VAR, referees
+        - Football venues: stadiums, pitches
+        - Football tactics: formations, strategies, substitutions
+        - Transfer news and player movements
 
-            Question: {question}"""
+        KEY POINTS:
+        - Focus on the TOPIC and CONTEXT, not grammar or sentence structure
+        - "MVP" in any context is likely football-related
+        - Questions about player statistics, awards, or performance are football-related
+        - Both singular and plural forms should be treated the same way
+        - If there's any reasonable football interpretation, classify as football-related
+        - Questions about countries in a football context should be considered football-related. For example, "What can you say about Spain?" in a football assistant context is asking about Spain's football team.
+
+        Examples of FOOTBALL questions:
+        - "Which player was mvp most of the times?"
+        - "Which players were mvp most of the times?"
+        - "Who scored the most goals?"
+        - "What team won the championship?"
+        - "Tell me about Messi's performance"
+        - "Which country has the best football team?"
+
+        Examples of NON-FOOTBALL questions:
+        - "What's the weather like?"
+        - "How do I cook pasta?"
+        - "What is machine learning?"
+        - "MVP in business context"
+
+        Respond with ONLY "YES" or "NO".
+
+        Question: {question}"""
         )
         response = validation_llm.invoke(validation_prompt.format(question=question))
         return response.content.strip().upper() == "YES"
