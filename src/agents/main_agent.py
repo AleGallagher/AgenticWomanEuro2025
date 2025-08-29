@@ -11,6 +11,7 @@ from services.database_service import DatabaseService
 from tools.agentic_rag_tool import agentic_rag
 from tools.qualification_tool import get_qualification_options
 from tools.sql_tool import get_sql_tool
+from services.prompt_utils import PromptUtils
 
 class State(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
@@ -155,47 +156,8 @@ class MainAgent:
     def _validate_football_question(self, question: str) -> bool:
         """Validate if the question is related to football/soccer."""
         validation_llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
-        validation_prompt = PromptTemplate.from_template(
-        """You are a football/soccer question classifier. Your task is to determine if a question is related to football/soccer.
-
-        A question is football-related if it mentions or asks about ANY of these topics:
-        - Players (individual or multiple): names, performance, statistics, achievements
-        - Teams: club teams, national teams, lineups, tactics
-        - Matches/Games: scores, results, events, highlights
-        - Tournaments/Competitions: UEFA Euro, World Cup, leagues, championships
-        - Football statistics: goals, assists, saves, MVP, player of the match, awards
-        - Football history: records, achievements, trophies, past events
-        - Football elements: penalties, fouls, cards, VAR, referees
-        - Football venues: stadiums, pitches
-        - Football tactics: formations, strategies, substitutions
-        - Transfer news and player movements
-
-        KEY POINTS:
-        - Focus on the TOPIC and CONTEXT, not grammar or sentence structure
-        - "MVP" in any context is likely football-related
-        - Questions about player statistics, awards, or performance are football-related
-        - Both singular and plural forms should be treated the same way
-        - If there's any reasonable football interpretation, classify as football-related
-        - Questions about countries in a football context should be considered football-related. For example, "What can you say about Spain?" in a football assistant context is asking about Spain's football team.
-
-        Examples of FOOTBALL questions:
-        - "Which player was mvp most of the times?"
-        - "Which players were mvp most of the times?"
-        - "Who scored the most goals?"
-        - "What team won the championship?"
-        - "Tell me about Messi's performance"
-        - "Which country has the best football team?"
-
-        Examples of NON-FOOTBALL questions:
-        - "What's the weather like?"
-        - "How do I cook pasta?"
-        - "What is machine learning?"
-        - "MVP in business context"
-
-        Respond with ONLY "YES" or "NO".
-
-        Question: {question}"""
-        )
+        prompt_config = PromptUtils.load_prompt_template("validation_question", "v0") 
+        validation_prompt = PromptTemplate.from_template(prompt_config["template"])
         response = validation_llm.invoke(validation_prompt.format(question=question))
         return response.content.strip().upper() == "YES"
     
