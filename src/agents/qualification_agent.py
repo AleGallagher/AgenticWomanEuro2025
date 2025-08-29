@@ -1,5 +1,7 @@
-from tools.sql_tool import get_sql_tool
 from langchain.prompts import PromptTemplate
+
+from services.prompt_utils import PromptUtils
+from tools.sql_tool import get_sql_tool
 
 COMPETITION_RULES_TEXT = """
 UEFA Women's Euro 2025 Qualification Rules:
@@ -34,35 +36,12 @@ def handle_qualification_question(llm, question, question_language):
     sql_result = result
 
     rules_result = COMPETITION_RULES_TEXT
-
+    # Step 2: Load prompt template from YAML
+    prompt_config = PromptUtils.load_prompt_template("qualification_analysis", "v0") 
     # Step 3: Synthesize with LLM
     prompt_template = PromptTemplate(
-        input_variables=["team", "current_standings", "remaining_matches", "rules"],
-        template="""
-        You are an expert on the Women's Eurocup 2025.
-
-        The user asked: {question}
-
-        You retrieved the following data from the database:
-        {sql_data}
-
-        You also retrieved the following qualification rules:
-        {rules}
-
-    
-
-        Now, based on the standings paying attention on the matches won, lost and draw, the points of each team, upcoming matches, and rules, explain what the team needs to do to qualify.
-        ONLY use the remaining group matches and the current status of the group. DO NOT include already played matches in the analysis.
-        Qualification depends on possible outcomes of upcoming group matches only.
-        Be specific. Mention possible scenarios (e.g., win + X team draws, or tie-breakers).
-        1. If qualification is **mathematically impossible**, explain this clearly and briefly. Do NOT describe hypothetical or impossible scenarios.
-        2. If qualification is **still possible**, provide a clear and specific explanation of what needs to happen:
-        - Include required match outcomes and tie-breaker situations.
-        - Use current standings, points, goal difference, and match data.
-        - Only consider the remaining group matches. Ignore matches that have already been played.
-        Be clear, and answer in {language} language.
-
-        Final Answer:"""
+        input_variables=prompt_config["input_variables"],
+        template=prompt_config["template"]
     )
 
     llm_chain = prompt_template | llm

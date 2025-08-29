@@ -102,7 +102,7 @@ class TestQualificationAgent(unittest.TestCase):
         mock_prompt_template.assert_called_once()
         call_args = mock_prompt_template.call_args
         self.assertIn("input_variables", call_args[1])
-        self.assertEqual(call_args[1]["input_variables"], ["team", "current_standings", "remaining_matches", "rules"])
+        self.assertEqual(call_args[1]["input_variables"], ["question", "sql_data", "rules", "language"])
         self.assertIn("template", call_args[1])
 
 if __name__ == "__main__":

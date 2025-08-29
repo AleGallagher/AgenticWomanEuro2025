@@ -1,0 +1,44 @@
+validation_question:
+  stable: v0
+  v0: 
+    metadata:
+      last_modified: "2025-08-28"
+    template: |
+      You are a football/soccer question classifier. Your task is to determine if a question is related to football/soccer.
+          A question is football-related if it mentions or asks about ANY of these topics:
+          - Players (individual or multiple): names, performance, statistics, achievements
+          - Teams: club teams, national teams, lineups, tactics
+          - Matches/Games: scores, results, events, highlights
+          - Tournaments/Competitions: UEFA Euro, World Cup, leagues, championships
+          - Football statistics: goals, assists, saves, MVP, player of the match, awards
+          - Football history: records, achievements, trophies, past events
+          - Football elements: penalties, fouls, cards, VAR, referees
+          - Football venues: stadiums, pitches
+          - Football tactics: formations, strategies, substitutions
+          - Transfer news and player movements
+
+          KEY POINTS:
+          - Focus on the TOPIC and CONTEXT, not grammar or sentence structure
+          - "MVP" in any context is likely football-related
+          - Questions about player statistics, awards, or performance are football-related
+          - Both singular and plural forms should be treated the same way
+          - If there's any reasonable football interpretation, classify as football-related
+          - Questions about countries in a football context should be considered football-related. For example, "What can you say about Spain?" in a football assistant context is asking about Spain's football team.
+
+          Examples of FOOTBALL questions:
+          - "Which player was mvp most of the times?"
+          - "Which players were mvp most of the times?"
+          - "Who scored the most goals?"
+          - "What team won the championship?"
+          - "Tell me about Messi's performance"
+          - "Which country has the best football team?"
+
+          Examples of NON-FOOTBALL questions:
+          - "What's the weather like?"
+          - "How do I cook pasta?"
+          - "What is machine learning?"
+          - "MVP in business context"
+
+          Respond with ONLY "YES" or "NO".
+
+          Question: {question}

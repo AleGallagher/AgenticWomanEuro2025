@@ -11,6 +11,7 @@ from services.database_service import DatabaseService
 from tools.agentic_rag_tool import agentic_rag
 from tools.qualification_tool import get_qualification_options
 from tools.sql_tool import get_sql_tool
+from services.prompt_utils import PromptUtils
 
 class State(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
@@ -155,40 +156,8 @@ class MainAgent:
     def _validate_football_question(self, question: str) -> bool:
         """Validate if the question is related to football/soccer."""
         validation_llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
-        validation_prompt = PromptTemplate.from_template(
-            """You are a validator for a football assistant. Determine if the following question is related to football/soccer, UEFA Euro championships, or football statistics.
-            
-            Football-related topics include:
-            - Players, teams, matches, tournaments, competitions
-            - Statistics, scores, goals, assists, saves
-            - Football history, records, achievements, trophies
-            - Qualifications, groups, standings, fixtures
-            - Penalty shootouts, penalties, fouls, cards
-            - Football tactics, formations, strategies
-            - Transfer news, player movements
-            - Match events, highlights, incidents, VAR
-            - Team lineups, substitutions
-            - Referees, officials, decisions
-            - Football venues, stadiums
-            
-            IMPORTANT: Questions about countries in a football context should be considered football-related.
-            For example, "What can you say about Spain?" in a football assistant context is asking about Spain's football team.
-
-            Examples of non-football questions:
-            - "What is the weather today?"
-            - "How do I cook pasta?"
-            - "What is the capital of France?"
-            
-            Examples of football questions:
-            - "Who scored in the match between Spain and Italy?"
-            - "Who committed penalties in the penalty shootout?"
-            - "Which teams qualified for the semifinals?"
-            - "What can you say about Spain?"
-            
-            Answer only with "YES" or "NO".
-
-            Question: {question}"""
-        )
+        prompt_config = PromptUtils.load_prompt_template("validation_question", "v0") 
+        validation_prompt = PromptTemplate.from_template(prompt_config["template"])
         response = validation_llm.invoke(validation_prompt.format(question=question))
         return response.content.strip().upper() == "YES"
     
