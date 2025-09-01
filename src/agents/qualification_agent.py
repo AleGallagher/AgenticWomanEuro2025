@@ -1,4 +1,5 @@
 from langchain.prompts import PromptTemplate
+from langchain_openai import ChatOpenAI
 
 from services.prompt_utils import PromptUtils
 from tools.sql_tool import get_sql_tool
@@ -16,7 +17,7 @@ Group Stage:
     3. Higher number of goals scored in the matches played among the teams in question (head-to-head goals scored).
 """
 
-def handle_qualification_question(llm, question, question_language):
+async def handle_qualification_question(llm: ChatOpenAI, question: str, question_language: str) -> str:
     """
     Handle a user question about team qualification scenarios in the Women's Eurocup 2025.
 
@@ -45,7 +46,7 @@ def handle_qualification_question(llm, question, question_language):
     )
 
     llm_chain = prompt_template | llm
-    answer = llm_chain.invoke({
+    answer = await llm_chain.ainvoke({
         "question": question,
         "sql_data": sql_result,
         "rules": rules_result,

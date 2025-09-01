@@ -1,7 +1,8 @@
+import asyncio
 import os
 import sys
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../src')))
 
@@ -13,7 +14,7 @@ class TestQualificationAgent(unittest.TestCase):
     @patch('agents.qualification_agent.PromptTemplate')
     def test_handle_qualification_question_success(self, mock_prompt_template, mock_sql_tool):
         # GIVEN
-        mock_llm = MagicMock()
+        mock_llm = AsyncMock()
         question = "What does Spain need to qualify?"
         question_language = "English"
         
@@ -22,9 +23,9 @@ class TestQualificationAgent(unittest.TestCase):
         mock_sql_tool.invoke.return_value = mock_sql_result
         
         # Mock LLM chain
-        mock_chain = MagicMock()
+        mock_chain = AsyncMock()
         mock_llm_response = "Spain needs to win their next match to qualify."
-        mock_chain.invoke.return_value = mock_llm_response
+        mock_chain.ainvoke.return_value = mock_llm_response
         
         # Mock prompt template
         mock_template = MagicMock()
@@ -32,8 +33,8 @@ class TestQualificationAgent(unittest.TestCase):
         mock_prompt_template.return_value = mock_template
         
         # WHEN
-        result = handle_qualification_question(mock_llm, question, question_language)
-        
+        result = asyncio.run(handle_qualification_question(mock_llm, question, question_language))
+
         # THEN
         self.assertEqual(result, mock_llm_response)
         mock_sql_tool.invoke.assert_called_once_with({
@@ -42,7 +43,7 @@ class TestQualificationAgent(unittest.TestCase):
             "question_language": "English"
         })
         mock_prompt_template.assert_called_once()
-        mock_chain.invoke.assert_called_once_with({
+        mock_chain.ainvoke.assert_called_once_with({
             "question": question,
             "sql_data": mock_sql_result,
             "rules": handle_qualification_question.__globals__['COMPETITION_RULES_TEXT'],
@@ -53,7 +54,7 @@ class TestQualificationAgent(unittest.TestCase):
     @patch('agents.qualification_agent.PromptTemplate')
     def test_handle_qualification_question_different_language(self, mock_prompt_template, mock_sql_tool):
         # GIVEN
-        mock_llm = MagicMock()
+        mock_llm = AsyncMock()
         question = "¿Qué necesita España para clasificarse?"
         question_language = "Spanish"
         
@@ -62,42 +63,42 @@ class TestQualificationAgent(unittest.TestCase):
         mock_sql_tool.invoke.return_value = mock_sql_result
         
         # Mock LLM chain
-        mock_chain = MagicMock()
+        mock_chain = AsyncMock()
         mock_llm_response = "España necesita ganar su próximo partido."
-        mock_chain.invoke.return_value = mock_llm_response
-        
+        mock_chain.ainvoke.return_value = mock_llm_response
+
         # Mock prompt template
         mock_template = MagicMock()
         mock_template.__or__ = MagicMock(return_value=mock_chain)
         mock_prompt_template.return_value = mock_template
         
         # WHEN
-        result = handle_qualification_question(mock_llm, question, question_language)
-        
+        result = asyncio.run(handle_qualification_question(mock_llm, question, question_language))
+
         # THEN
         self.assertEqual(result, mock_llm_response)
-        mock_chain.invoke.assert_called_once()
-        call_args = mock_chain.invoke.call_args[0][0]
+        mock_chain.ainvoke.assert_called_once()
+        call_args = mock_chain.ainvoke.call_args[0][0]
         self.assertEqual(call_args["language"], "Spanish")
 
     @patch('agents.qualification_agent.get_sql_tool')
     @patch('agents.qualification_agent.PromptTemplate')
     def test_handle_qualification_question_prompt_template_creation(self, mock_prompt_template, mock_sql_tool):
         # GIVEN
-        mock_llm = MagicMock()
+        mock_llm = AsyncMock()
         question = "What about France?"
         question_language = "English"
         
         mock_sql_tool.invoke.return_value = "mock_sql_data"
-        mock_chain = MagicMock()
-        mock_chain.invoke.return_value = "mock_response"
+        mock_chain = AsyncMock()
+        mock_chain.ainvoke.return_value = "mock_response"
         mock_template = MagicMock()
         mock_template.__or__ = MagicMock(return_value=mock_chain)
         mock_prompt_template.return_value = mock_template
         
         # WHEN
-        handle_qualification_question(mock_llm, question, question_language)
-        
+        asyncio.run(handle_qualification_question(mock_llm, question, question_language))
+
         # THEN
         mock_prompt_template.assert_called_once()
         call_args = mock_prompt_template.call_args

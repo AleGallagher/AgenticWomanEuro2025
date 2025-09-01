@@ -18,7 +18,7 @@ from rag.vector_stores.base_store import BaseStore
                     "- 'Top goal scorers in tournament history?'"
                 )
 )
-def agentic_rag(vector_store: Annotated[BaseStore, InjectedToolArg], question: str = "", question_language: Annotated[str, InjectedToolArg] = "English"):
+async def agentic_rag(vector_store: Annotated[BaseStore, InjectedToolArg], question: str = "", question_language: Annotated[str, InjectedToolArg] = "English") -> str:
     """
     Retrieve relevant answer based on the query.
     """
@@ -26,6 +26,6 @@ def agentic_rag(vector_store: Annotated[BaseStore, InjectedToolArg], question: s
         "messages": [HumanMessage(content=question)],
         "question_language": question_language
     }
-    argentic_rag = AgenticRAG(vector_store)
-    return argentic_rag(initial_state)["messages"][-1].content
-     
+    agentic_rag = AgenticRAG(vector_store)
+    result = await agentic_rag(initial_state)
+    return result["messages"][-1].content

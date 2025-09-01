@@ -1,21 +1,28 @@
+import asyncio
 import os
-import time
 import uuid
 
 from sqlalchemy import Column, MetaData, String, Table, Text, create_engine
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker,
+                                    create_async_engine)
 from sqlalchemy.orm import sessionmaker
+
 
 class DatabaseService:
     def __init__(self):
         self.database_url = os.getenv("DATABASE_URL", os.getenv("POSTGRES_HOST"))
-        self.engine = create_engine(self.database_url)
+        if self.database_url.startswith("postgresql://"):
+            self.database_url = self.database_url.replace("postgresql://", "postgresql+asyncpg://")
+
+        self.engine = create_async_engine(self.database_url)
         self.metadata = MetaData()
 
         self.question_answer_table = Table(
             "question_answer",
             self.metadata,
-            Column("id", String, primary_key=True),
+            Column("id", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
             Column("country", String, nullable=True),
             Column("user_id", String, nullable=False),
             Column("question", Text, nullable=False),
@@ -25,10 +32,22 @@ class DatabaseService:
             Column("tool", String, nullable=False)
         )
 
-        self.metadata.create_all(self.engine)
-        self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+        # Create async session factory
+        self.AsyncSessionLocal = async_sessionmaker(
+            autocommit=False, 
+            autoflush=False, 
+            bind=self.engine
+        )
+        self._initialized = False
 
-    def save_question_answer(self, user_id: str, question: str, original_question: str, country, response: str, question_language: str, tool: str):
+    async def initialize_tables(self):
+        """Initialize database tables (call once at startup)"""
+        if not self._initialized:
+            async with self.engine.begin() as conn:
+                await conn.run_sync(self.metadata.create_all)
+            self._initialized = True
+
+    async def save_question_answer(self, user_id: str, question: str, original_question: str, country, response: str, question_language: str, tool: str):
         """
         Store the question and response in the database.
 
@@ -42,15 +61,17 @@ class DatabaseService:
             question_language (str): The language of the question.
             tool (str): The tool used to generate the response.
         """
+        if not self._initialized:
+            await self.initialize_tables()
         attempt = 0
         retries = 3
         delay = 2
         while attempt < retries:
             try:
-                with self.SessionLocal() as session:
-                    session.execute(
+                async with self.AsyncSessionLocal() as session:
+                    await session.execute(
                         self.question_answer_table.insert().values(
-                            id=str(uuid.uuid4()),
+                            id=uuid.uuid4(),
                             country=country,
                             user_id=user_id,
                             question=question,
@@ -60,15 +81,19 @@ class DatabaseService:
                             tool=tool,
                         )
                     )
-                    session.commit()
+                    await session.commit()
                     return
             except OperationalError as e:
                 attempt += 1
                 print(f"Attempt {attempt} failed: {e}")
                 if attempt < retries:
                     print(f"Retrying in {delay} seconds...")
-                    time.sleep(delay)
+                    await asyncio.sleep(delay)
                 else:
                     print("All retry attempts failed.")
             except Exception as e:
                 print(f"An unexpected error occurred: {e}")
+
+    async def close(self):
+        """Close the database engine"""
+        await self.engine.dispose()

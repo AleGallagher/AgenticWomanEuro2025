@@ -18,7 +18,7 @@ from agents.sql_agent import SQLAgent
                     "- 'Total goals by Spain?'"
                 )
 )
-def get_sql_tool(model: Annotated[ChatOpenAI, InjectedToolArg], question: str = "", question_language: Annotated[str, InjectedToolArg] = "English"):
+async def get_sql_tool(model: Annotated[ChatOpenAI, InjectedToolArg], question: str = "", question_language: Annotated[str, InjectedToolArg] = "English") -> str:
     """
     Use for specific data such as coach names, team information, player lists, scores, and matches
     """
@@ -26,6 +26,6 @@ def get_sql_tool(model: Annotated[ChatOpenAI, InjectedToolArg], question: str = 
         "input": question,
         "question_language": question_language,
     }
-    sql_agent = SQLAgent(model)
-    response = sql_agent(initial_state)
+    sql_agent = SQLAgent()
+    response = await sql_agent(initial_state)
     return response["messages"][-1].content
