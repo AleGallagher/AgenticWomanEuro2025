@@ -1,6 +1,7 @@
 import os
 from operator import itemgetter
-from typing import Annotated, Literal, Optional, Sequence, TypedDict
+from typing import (Annotated, Dict, List, Literal, Optional, Sequence,
+                    TypedDict)
 
 from langchain.tools import Tool
 from langchain_core.messages import BaseMessage, HumanMessage
@@ -9,11 +10,13 @@ from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 from pydantic import BaseModel, Field
 
 from rag.metadata_model import QuestionMetadataOutput
 from rag.vector_stores.base_store import BaseStore
+
 
 class State(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
@@ -26,23 +29,24 @@ class AgenticRAG:
     def __init__(self, vector_store: BaseStore):
         self.llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
         self.vector_store = vector_store.get_vector_store()
-        self.graph = self._build_graph()
+        self.graph = None
         self.retriever = None
 
-    def _get_retrieval_tool(self):
+    def _get_retrieval_tool(self) -> Tool:
         """Return the Retrieval tool."""
-        def retriever_tool(query) -> str:
+        async def retriever_tool(query) -> str:
             """Retrieve relevant documents based on the query."""
-            docs = self.retriever.invoke(query)
+            docs = await self.retriever.ainvoke(query)
             return "\n\n".join([doc.page_content for doc in docs])
 
         return Tool(
             name="retrieverTool",
             func=retriever_tool,
+            coroutine=retriever_tool,
             description="Use this for general knowledge questions or open-ended information about the Women's Eurocup 2025. Example: 'What can you say about Spain?' or 'Who is the coach of England?'"
         )
 
-    def _build_graph(self):
+    async def build_graph(self) -> CompiledStateGraph:
         """
         Builds the state graph for the agentic RAG system.
         This method defines the flow of the agentic RAG process, including
@@ -87,8 +91,8 @@ class AgenticRAG:
         graph_builder.add_edge("notfound", END)
 
         return graph_builder.compile()
-    
-    def _grade_documents(self, state) -> Literal["generate", "rewrite"]:
+
+    async def _grade_documents(self, state: State) -> Literal["generate", "rewrite"]:
         """
         Determines whether the retrieved documents are relevant to the question.
 
@@ -121,7 +125,7 @@ class AgenticRAG:
         )
 
         chain = prompt | llm_with_structured_output
-        scored_result = chain.invoke({"question": question, "context": docs})
+        scored_result = await chain.ainvoke({"question": question, "context": docs})
         confidence_score = scored_result.confidence_score
         relevance_threshold = float(os.getenv("RAG_RELEVANCE_THRESHOLD", 0.7))
         if len(docs) > 0 and confidence_score > relevance_threshold:
@@ -129,7 +133,7 @@ class AgenticRAG:
         else:
             return "rewrite"
 
-    def _extract_metadata(self, state):
+    async def _extract_metadata(self, state: State) -> Dict[str, List[str]]:
         """
         Extracts metadata from the question to determine the countries involved.
 
@@ -146,10 +150,10 @@ class AgenticRAG:
             """,
             input_variables=["question"],
         )
-        response = self.llm.with_structured_output(QuestionMetadataOutput).invoke(prompt.format(question=question))
+        response = await self.llm.with_structured_output(QuestionMetadataOutput).ainvoke(prompt.format(question=question))
         return {"question_metadata": response}
 
-    def _agent(self, state):
+    async def _agent(self, state: State) -> Dict[str, List[str]]:
         """
         Invokes the agent model decide if a tool is needed based on the current state. Given
         the question, it will decide to retrieve using the retriever tool, or simply end.
@@ -167,11 +171,11 @@ class AgenticRAG:
         self.retriever = self.vector_store.as_retriever(search_type="similarity", search_kwargs = {"filter": filter_dict, 'k': int(os.getenv("RAG_RETRIEVAL_K", "5"))})
         self.tools = [self._get_retrieval_tool()]
         llm_with_tools = self.llm.bind_tools(self.tools, tool_choice="required")
-        response = llm_with_tools.invoke(messages)
+        response = await llm_with_tools.ainvoke(messages)
 
         return {"messages": [response]}
-    
-    def _not_found(self, state):
+
+    async def _not_found(self, state: State) -> Dict[str, List[str]]:
         """
         Handles the case where no relevant information is found.
 
@@ -203,22 +207,21 @@ class AgenticRAG:
         question = state["messages"][0].content
         language = state["question_language"]
 
-        response = self.llm.invoke(combined_prompt.format(question=question, language=language))
+        response = await self.llm.ainvoke(combined_prompt.format(question=question, language=language))
         return {"messages": [response]}
 
-    def _rewrite_question(self, state):
+    async def _rewrite_question(self, state: State) -> Dict[str, List[str]]:
         """
         Transform the query to produce a better question.
 
         Args:
-            state (messages): The current state
+            state (State): The current state
 
         Returns:
             dict: The updated state with re-phrased question
         """
         count = state.get("rewrite_count", 0) + 1
         if int(count) > int(os.getenv("RAG_RETRY_COUNT", 2)):
-            state["agent_action"] = "NOT_FOUND"
             return {"agent_action" : "NOT_FOUND", "rewrite_count": count}
     
         messages = state["messages"]
@@ -235,10 +238,10 @@ class AgenticRAG:
             )
         ]
 
-        response = self.llm.invoke(msg)
+        response = await self.llm.ainvoke(msg)
         return {"agent_action" : "agent", "messages": [response], "rewrite_count": count}
 
-    def _generate_response(self, state):
+    async def _generate_response(self, state: State) -> Dict[str, List[str]]:
         """
         Generate answer
 
@@ -271,8 +274,10 @@ class AgenticRAG:
                     | StrOutputParser()
                     )
         # Run
-        response = rag_chain.invoke({"question": question, "language": state.get("question_language")})
+        response = await rag_chain.ainvoke({"question": question, "language": state.get("question_language")})
         return {"messages": [response]}
 
-    def __call__(self, state: State):
-        return self.graph.invoke(state)
+    async def __call__(self, state: State) -> Dict[str, List[str]]:
+        if self.graph is None:
+            self.graph = await self.build_graph()
+        return await self.graph.ainvoke(state)

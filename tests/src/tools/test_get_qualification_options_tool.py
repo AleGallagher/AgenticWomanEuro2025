@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sys
 import unittest
@@ -19,9 +20,9 @@ class TestQualificationTool(unittest.TestCase):
         model = ChatOpenAI(api_key="test-key", model="gpt-3.5-turbo")
 
         # THEN
-        result = get_qualification_options.invoke(
+        result = asyncio.run(get_qualification_options.ainvoke(
             {"model" : model, "question" : question, "question_language" : question_language}
-        )
+        ))
 
         # ASSERT
         self.assertEqual(result, "MockResult")

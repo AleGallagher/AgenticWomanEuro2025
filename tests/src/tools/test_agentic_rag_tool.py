@@ -1,7 +1,8 @@
+import asyncio
 import os
 import sys
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../src')))
 
@@ -15,7 +16,7 @@ class TestAgenticRagStream(unittest.TestCase):
     @patch("tools.agentic_rag_tool.AgenticRAG")
     def test_agentic_rag_stream_valid_response(self, mock_agentic_rag):
         # GIVEN
-        mock_graph = MagicMock()
+        mock_graph = AsyncMock()
         mock_graph.return_value = {
             "messages": [HumanMessage(content="Mock response")]
         }
@@ -26,7 +27,7 @@ class TestAgenticRagStream(unittest.TestCase):
         store = FAISSStore(embedding_model=embedding_model)
 
         # WHEN
-        result = agentic_rag.invoke({"vector_store" : store , "question": question, "language": language})
+        result = asyncio.run(agentic_rag.ainvoke({"vector_store" : store , "question": question, "language": language}))
 
         # THEN
         self.assertEqual(result, "Mock response")

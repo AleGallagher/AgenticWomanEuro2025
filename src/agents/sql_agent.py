@@ -13,6 +13,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
+from langgraph.graph.state import CompiledStateGraph
 
 from services.prompt_utils import PromptUtils
 
@@ -27,17 +28,17 @@ class State(TypedDict):
     input: str
 
 class SQLAgent:
-    def __init__(self, llm):
+    def __init__(self):
         self.llm = ChatOpenAI(model="gpt-4o", temperature=0)
-        self.graph = self._get_graph_executor()
+        self.graph = None
     
-    def _get_graph_executor(self):
+    async def _build_graph(self) -> CompiledStateGraph:
         builder = StateGraph(State)
         db_agent = self._create_reasoning_node()
         builder.add_node("agent", db_agent)
         builder.add_node("notfound", self._not_found)
 
-        def relevant_answer(state):
+        async def relevant_answer(state):
             if "no results found" in state["messages"][-1].content.lower():
                 return "notfound"
             return END
@@ -50,7 +51,7 @@ class SQLAgent:
         builder.add_edge("notfound", END)
         return builder.compile()
     
-    def _not_found(self, state):
+    async def _not_found(self, state: State) -> dict:
         """
         Handles the case where no relevant information is found.
 
@@ -81,7 +82,7 @@ class SQLAgent:
         """
         )
         llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
-        response = llm.invoke(combined_prompt.format(question=state["input"], language=state["question_language"]))
+        response = await llm.ainvoke(combined_prompt.format(question=state["input"], language=state["question_language"]))
         return {"messages": [response]}
 
     def _create_reasoning_node(self):
@@ -104,9 +105,9 @@ class SQLAgent:
         agent = create_openai_functions_agent(llm=self.llm, tools=tools, prompt=prompt)
         executor = AgentExecutor(agent=agent, tools=tools, max_iterations=10, handle_parsing_errors=True)
 
-        def run_agent(state: State) -> dict:
+        async def run_agent(state: State) -> dict:
             try:
-                result = executor.invoke({"input": state["input"], "language": state["question_language"]})
+                result = await executor.ainvoke({"input": state["input"], "language": state["question_language"]})
                 if "agent stopped due to iteration limit or time limit." in result["output"].lower():
                     return {"messages": [AIMessage(content="Seems that there are no results for this question. Can I help you with something else?")]}
                 return {"messages": [AIMessage(content=result["output"])]}
@@ -169,5 +170,7 @@ class SQLAgent:
             _cache_last_updated = current_time
             return _cached_toolkit, _cached_prompt
         
-    def __call__(self, state: State):
-        return self.graph.invoke(state)
+    async def __call__(self, state: State) -> dict:
+        if self.graph is None:
+            self.graph = await self._build_graph()
+        return await self.graph.ainvoke(state)
