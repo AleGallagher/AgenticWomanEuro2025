@@ -1,4 +1,6 @@
-from fastapi import APIRouter
+from functools import lru_cache
+
+from fastapi import APIRouter, Depends
 from langchain_core.messages import HumanMessage
 
 from agents.main_agent import MainAgent
@@ -8,10 +10,14 @@ from dto.message_dto import MessageDto
 
 router = APIRouter()
 
+@lru_cache()
+def provide_agent() -> MainAgent:
+    return MainAgent(model=get_model(), vector_store=get_store())
 
 @router.post("/message")
 async def sendMessage(
-    message: MessageDto
+    message: MessageDto,
+    agent: MainAgent = Depends(provide_agent),
 ) -> dict:
     """
     Handles user messages and invokes the agent's graph.
@@ -30,7 +36,6 @@ async def sendMessage(
         raise InvalidRequestException("The 'session_id' field cannot be empty.")
     print(f"Question: {message} - rephrased_question: {message.question}")
     try:
-        agent = MainAgent(model=get_model(), vector_store=get_store())
         initial_state = {
             "messages": [HumanMessage(content=message.question)],
             "user_id": message.session_id,
