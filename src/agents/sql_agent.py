@@ -103,7 +103,7 @@ class SQLAgent:
         """
         tools, prompt = self._setup_sql_toolkit()
         agent = create_openai_functions_agent(llm=self.llm, tools=tools, prompt=prompt)
-        executor = AgentExecutor(agent=agent, tools=tools, max_iterations=10, handle_parsing_errors=True)
+        executor = AgentExecutor(agent=agent, tools=tools, max_iterations=10, handle_parsing_errors=True, verbose=False)
 
         async def run_agent(state: State) -> dict:
             try:
@@ -142,15 +142,23 @@ class SQLAgent:
                     view_support=True,
                     include_tables=prompt_config["include_tables"],
                     sample_rows_in_table_info=2,
-                    custom_table_info=prompt_config["custom_table_info"]
+                    custom_table_info=prompt_config["custom_table_info"],
+                    engine_args={"pool_pre_ping": True, "pool_recycle": 300, "pool_size": 5, "max_overflow": 5},
             )
+            table_info = db.get_table_info()
             toolkit = SQLDatabaseToolkit(db=db, llm=self.llm)
+            tools = [t for t in toolkit.get_tools() if t.name in {"sql_db_query", "query_sql_db"}]
+            system_msg = (
+                prompt_config["system_message"]
+                + "\n\nDo NOT call tools to list tables or fetch schema. Use only `query_sql_db`."
+                + "\nDatabase schema:\n" + table_info
+            )
             prompt = ChatPromptTemplate.from_messages([
-                    SystemMessagePromptTemplate.from_template(prompt_config["system_message"]),
+                    SystemMessagePromptTemplate.from_template(system_msg),
                     HumanMessagePromptTemplate.from_template("{input}\n\n{agent_scratchpad}")
             ])
 
-            return toolkit.get_tools(), prompt
+            return tools, prompt
          
         try:
             # Check if cache needs to be refreshed
